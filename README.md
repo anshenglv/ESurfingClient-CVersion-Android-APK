@@ -1,5 +1,6 @@
 ## ESurfingClient-CVersion Android 移植总结
 
+由于我对git和github的不熟悉，加上前面Push和commit时不仔细，导致一堆问题，因此我用最蠢的方法删库重建，所以之前star过的需要重新star一下。还有由于之前打的Tag就不一定匹配对应的版本，所以现在的Tag也不一定对应当时版本的代码。
 本项目已成功将原始 C 语言编写的天翼校园网认证客户端(来自[BadGhost520](https://github.com/BadGhost520))移植为 Android 原生应用(APK)。通过 JNI 桥接和 Android 前台服务，实现了无须 shell 或 Root 权限的校园网拨号认证。
 
 [转到原作者的项目](https://github.com/BadGhost520/ESurfingClient-CVersion) | [回到原先我修改的分支](https://github.com/anshenglv/ESurfingClient-CVersion-Android-arm-v8a)
@@ -13,7 +14,7 @@
 - 构建系统：从纯 CMake 迁移至 Android Gradle + CMake (NDK) 体系。
 - 输出格式：由可执行二进制文件转变为共享库 (.so)，通过 JNI 被 Android 应用调用。
 - 运行模式：采用 Android 前台服务 (Foreground Service) 包装 C 逻辑，并提供持续的通知栏显示。
-### 2. 原生 C 代码处理 (Native Laye
+### 2. 原生 C 代码处理
 - 尽量少地改动原始C代码，非必要问题不处理，方便日后同步更新。
 - 添加了一堆#ifdef __ANDROID__，用来避免执行没有的功能和没有的路径。
 - 不在Android上使用Web前端功能。
