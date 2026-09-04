@@ -1,0 +1,17 @@
+<resources>
+    <string name="app_name">ESurfing Client</string>
+    <string name="hint_username">Username</string>
+    <string name="hint_password">Password</string>
+    <string name="btn_save">Save Config</string>
+    <string name="btn_start">Start Service</string>
+    <string name="btn_stop">Stop Service</string>
+    <string name="btn_clear_logs">Clear Logs</string>
+    <string name="nav_home">Home</string>
+    <string name="nav_logs">Logs</string>
+    <string name="config_saved">Config saved</string>
+    <string name="logs_cleared">Logs cleared</string>
+    <string name="notif_title">ESurfing Client</string>
+    <string name="notif_content">ESurfing Client is running</string>
+    <string name="no_logs">No logs yet...</string>
+    <string name="main_title">ESurfing Client</string>
+</resources>
