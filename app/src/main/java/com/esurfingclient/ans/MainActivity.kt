@@ -245,6 +245,7 @@ class MainActivity : AppCompatActivity() {
     private fun saveConfig() {
         val username = binding.etUsername.text.toString()
         val password = binding.etPassword.text.toString()
+        val channel = binding.switch1.isChecked
 
         val config = JSONObject()
         config.put("enabled", true)
@@ -254,7 +255,8 @@ class MainActivity : AppCompatActivity() {
         val account = JSONObject()
         account.put("username", username)
         account.put("password", password)
-        account.put("channel", "phone")
+        if(channel) {account.put("channel", "pc")}
+        else {account.put("channel", "phone")}
         account.put("mark", "")
         accounts.put(account)
 
@@ -275,6 +277,7 @@ class MainActivity : AppCompatActivity() {
                     val account = accounts.getJSONObject(0)
                     binding.etUsername.setText(account.getString("username"))
                     binding.etPassword.setText(account.getString("password"))
+                    binding.switch1.isChecked = account.getString("channel") == "pc"
                 }
             } catch (e: Exception) {
                 e.printStackTrace()

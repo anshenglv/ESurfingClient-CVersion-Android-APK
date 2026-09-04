@@ -14,4 +14,5 @@
     <string name="notif_content">认证服务正在运行</string>
     <string name="no_logs">暂无日志...</string>
     <string name="main_title">天翼校园客户端</string>
+    <string name="channel_use">使用PC认证通道</string>
 </resources>
