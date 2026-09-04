@@ -659,9 +659,10 @@ void work()
 
     LOG_INFO("-------------------------------------------------------------------");
     LOG_INFO(" - 程序版本: 2.0.6-r1" );
-    LOG_INFO(" - 本程序由 BadGhost (鬼鬼) 制作, 遵循 Apache-2.0 开源协议");
+    LOG_INFO(" - 本程序由 BadGhost (鬼鬼) 制作, 由 anshenglv (ans) 移植，遵循 Apache-2.0 开源协议");
     LOG_INFO(" - 项目地址: https://github.com/BadGhost520/ESurfingClient-CVersion");
-    LOG_INFO(" - 制作不易, 赞助鬼鬼, 让鬼鬼更好地去维护更新这个项目罢~");
+    LOG_INFO(" - 移植地址: https://github.com/anshenglv/ESurfingClient-CVersion-Android-APK");
+    LOG_INFO(" - 制作不易, 赞助鬼鬼, 让鬼鬼更好地去维护更新这个项目罢~ 同时也给 anshenglv 点个star吧!");
     LOG_INFO("-------------------------------------------------------------------");
 
 #if !defined(__OPENWRT__) && !defined(__ANDROID__)
