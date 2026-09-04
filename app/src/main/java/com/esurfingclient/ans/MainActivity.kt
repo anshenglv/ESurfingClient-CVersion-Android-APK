@@ -95,13 +95,12 @@ class MainActivity : AppCompatActivity() {
             saveConfig()
         }
 
-        binding.btnStart.setOnClickListener {
-            checkPermissionAndStart()
-        }
-
-        binding.btnStop.setOnClickListener {
-            val intent = Intent(this, ESurfingService::class.java)
-            stopService(intent)
+        binding.btnStartStop.setOnClickListener {
+            if (isNativeRunning()) {
+                stopService()
+            } else {
+                checkPermissionAndStart()
+            }
         }
 
         binding.btnClearLogs.setOnClickListener {
@@ -112,8 +111,39 @@ class MainActivity : AppCompatActivity() {
         binding.tvLogs.textSize = logFontSize
         loadConfigToUI()
         
+        // Update button state periodically
+        handler.post(object : Runnable {
+            override fun run() {
+                updateButtonState()
+                handler.postDelayed(this, 500)
+            }
+        })
+        
         // Default view
         showHome()
+    }
+
+    private fun updateButtonState() {
+        val running = isNativeRunning()
+        if (binding.pbLoading.visibility == View.VISIBLE) {
+            // We are in the middle of stopping
+            if (!running) {
+                binding.pbLoading.visibility = View.GONE
+                binding.btnStartStop.isEnabled = true
+                binding.btnStartStop.text = getString(R.string.btn_start)
+            }
+        } else {
+            binding.btnStartStop.text = if (running) getString(R.string.btn_stop) else getString(R.string.btn_start)
+        }
+    }
+
+    private fun stopService() {
+        binding.btnStartStop.isEnabled = false
+        binding.btnStartStop.text = ""
+        binding.pbLoading.visibility = View.VISIBLE
+        
+        val intent = Intent(this, ESurfingService::class.java)
+        stopService(intent)
     }
 
     private fun showHome() {
@@ -273,6 +303,8 @@ class MainActivity : AppCompatActivity() {
             startService()
         }
     }
+
+    private external fun isNativeRunning(): Boolean
 
     external fun stringFromJNI(): String
 

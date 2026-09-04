@@ -64,6 +64,11 @@ Java_com_esurfingclient_ans_ESurfingService_stopNative(JNIEnv* env, jobject thiz
     LOGI("Native client stop requested (async)");
 }
 
+extern "C" JNIEXPORT jboolean JNICALL
+Java_com_esurfingclient_ans_MainActivity_isNativeRunning(JNIEnv* env, jobject thiz) {
+    return (jboolean)g_thread_keep_alive;
+}
+
 extern "C" JNIEXPORT jstring JNICALL
 Java_com_esurfingclient_ans_MainActivity_stringFromJNI(
         JNIEnv* env,

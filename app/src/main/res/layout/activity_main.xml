@@ -68,19 +68,25 @@
                     android:layout_marginBottom="16dp"
                     android:text="@string/btn_save" />
 
-                <Button
-                    android:id="@+id/btn_start"
+                <FrameLayout
                     android:layout_width="match_parent"
                     android:layout_height="wrap_content"
-                    android:layout_marginBottom="8dp"
-                    android:text="@string/btn_start" />
+                    android:layout_marginBottom="8dp">
 
-                <Button
-                    android:id="@+id/btn_stop"
-                    android:layout_width="match_parent"
-                    android:layout_height="wrap_content"
-                    android:layout_marginBottom="8dp"
-                    android:text="@string/btn_stop" />
+                    <Button
+                        android:id="@+id/btn_start_stop"
+                        android:layout_width="match_parent"
+                        android:layout_height="wrap_content"
+                        android:text="@string/btn_start" />
+
+                    <ProgressBar
+                        android:id="@+id/pb_loading"
+                        android:layout_width="24dp"
+                        android:layout_height="24dp"
+                        android:layout_gravity="center"
+                        android:visibility="gone"
+                        android:indeterminateTint="@color/white" />
+                </FrameLayout>
 
                 <Button
                     android:id="@+id/btn_clear_logs"

@@ -529,6 +529,8 @@ NetworkStatus get_last_location()
     uint8_t retry = 1;
     do
     {
+        if (g_need_exit || !g_thread_keep_alive) return REQUEST_ERROR;
+
         resp = get(s_generate_url); // 检测响应码
         if (resp.curl_code == CURLE_COULDNT_RESOLVE_HOST)
         {
@@ -559,9 +561,13 @@ NetworkStatus get_last_location()
             sleep_ms(1000, true);
             break;
         }
-    } while (resp.status != REQUEST_REDIRECT);
+    } while (resp.status != REQUEST_REDIRECT && g_thread_keep_alive && !g_need_exit);
 
-    while (resp.status == REQUEST_REDIRECT) resp = get(g_prog_status[tl_thread_idx].last_location);
+    if (g_need_exit || !g_thread_keep_alive) return REQUEST_ERROR;
+
+    while (resp.status == REQUEST_REDIRECT && g_thread_keep_alive && !g_need_exit) resp = get(g_prog_status[tl_thread_idx].last_location);
+
+    if (g_need_exit || !g_thread_keep_alive) return REQUEST_ERROR;
 
     g_prog_status[tl_thread_idx].last_location_lock = true;
     LOG_DEBUG("配置 %" PRIu8 " 获取认证配置 URL: %s", g_prog_status[tl_thread_idx].login_cfg.idx, g_prog_status[tl_thread_idx].last_location);
