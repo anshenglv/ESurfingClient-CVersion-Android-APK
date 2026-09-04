@@ -89,21 +89,21 @@ else()
 endif()
 
 add_library(ans SHARED
-        src/cipher/impl/mod_xtea_cbc_triple_pc.c
-        src/cipher/impl/des_ecb_six_pc.c
-        src/cipher/impl/desede_cbc_pc.c
-        src/cipher/impl/mod_xtea_pc.c
-        src/cipher/impl/mod_xtea_iv.c
-        src/cipher/impl/aes_ecb_pc.c
-        src/cipher/impl/aes_cbc_pc.c
-        src/cipher/impl/desede_ecb.c
-        src/cipher/impl/desede_cbc.c
-        src/cipher/impl/mod_xtea.c
-        src/cipher/impl/sm4_ecb.c
-        src/cipher/impl/sm4_cbc.c
-        src/cipher/impl/aes_ecb.c
-        src/cipher/impl/aes_cbc.c
-        src/cipher/impl/zuc.c
+        src/cipher/algo/android/aes_double_cbc_android.c
+        src/cipher/algo/android/aes_double_ecb_android.c
+        src/cipher/algo/android/des_ecb_six_android.c
+        src/cipher/algo/android/desede_double_cbc_android.c
+        src/cipher/algo/android/sm4_variant_cbc_android.c
+        src/cipher/algo/android/sm4_variant_ecb_android.c
+        src/cipher/algo/android/snow3g_variant_android.c
+        src/cipher/algo/android/tea_triple_cbc_android.c
+        src/cipher/algo/android/tea_triple_ecb_android.c
+        src/cipher/algo/linux/mod_xtea_cbc_triple_linux.c
+        src/cipher/algo/linux/des_ecb_six_linux.c
+        src/cipher/algo/linux/desede_cbc_linux.c
+        src/cipher/algo/linux/mod_xtea_linux.c
+        src/cipher/algo/linux/aes_ecb_linux.c
+        src/cipher/algo/linux/aes_cbc_linux.c
         src/cipher/CipherFactory.c
         src/cipher/CipherUtils.c
         src/cipher/KeyData.c
@@ -173,12 +173,12 @@ target_compile_options(ans PRIVATE -Wall -Wextra -Wno-unused-parameter)
 
 if (__OPENWRT__ OR ANDROID)
     set_target_properties(ans PROPERTIES
-        LINK_FLAGS "-Wl,--strip-all -Wl,--exclude-libs,ALL"
+            LINK_FLAGS "-Wl,--strip-all -Wl,--exclude-libs,ALL"
     )
 else ()
     add_custom_command(TARGET ans POST_BUILD
-        COMMAND ${CMAKE_STRIP} "$<TARGET_FILE:ans>"
-)
+            COMMAND ${CMAKE_STRIP} "$<TARGET_FILE:ans>"
+    )
 endif ()
 
 # install(TARGETS ESurfingClient RUNTIME DESTINATION bin)

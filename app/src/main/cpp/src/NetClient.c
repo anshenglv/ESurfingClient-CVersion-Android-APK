@@ -27,8 +27,7 @@
 
 static const char s_req_content_type[] = "Content-Type: application/x-www-form-urlencoded";
 static const char s_req_accept[] = "Accept: text/html,text/xml,application/xhtml+xml,application/x-javascript,*/*";
-static const char s_generate_url[] = "http://connect.rom.miui.com/generate_204";
-static const char s_backup_generate_url[] = "http://192.0.2.1";
+static const char s_generate_url[] = "http://223.5.5.5";
 
 static char s_school_id[SCHOOL_ID_LENGTH];
 static char s_domain[DOMAIN_LENGTH];
@@ -161,7 +160,7 @@ static size_t header_cb(const void* contents, const size_t size, const size_t nm
 
     if (real_size >= 9 && strncasecmp(header, "Location:", 9) == 0)
     {
-        if (tl_thread_idx != -1)
+        if (tl_thread_idx > -1)
         {
             if (!g_prog_status[tl_thread_idx].last_location_lock)
             {
@@ -383,7 +382,7 @@ http_resp_t post(const char* url, const char* data)
     if (resp_code == 302)
     {
         LOG_DEBUG("重定向, 响应码: 302");
-        if (tl_thread_idx != -1) LOG_VERBOSE("重定向至: %s", g_prog_status[tl_thread_idx].last_location);
+        if (tl_thread_idx > -1) LOG_VERBOSE("重定向至: %s", g_prog_status[tl_thread_idx].last_location);
         resp.status = REQUEST_REDIRECT;
         return resp;
     }
@@ -416,7 +415,7 @@ http_resp_t get(const char* url)
 
     struct curl_slist* headers = NULL;
 
-    if (tl_thread_idx != -1)
+    if (tl_thread_idx > -1)
     {
         snprintf(ua, MAX_LEN, "User-Agent: %s", safe_str(g_prog_status[tl_thread_idx].login_cfg.user_agent));
         snprintf(c_id, MAX_LEN, "Client-ID: %s", safe_str(g_prog_status[tl_thread_idx].auth_cfg.client_id));
@@ -445,7 +444,7 @@ http_resp_t get(const char* url)
     curl_easy_setopt(curl, CURLOPT_URL, url);
     curl_easy_setopt(curl, CURLOPT_TIMEOUT, 10L);
     curl_easy_setopt(curl, CURLOPT_FOLLOWLOCATION, 0L);
-    if (tl_thread_idx != -1)
+    if (tl_thread_idx > -1)
     {
         curl_easy_setopt(curl, CURLOPT_HTTPHEADER, headers);
         curl_easy_setopt(curl, CURLOPT_HEADERFUNCTION, header_cb);
@@ -478,7 +477,7 @@ http_resp_t get(const char* url)
     if (resp_code == 302)
     {
         LOG_DEBUG("重定向, 响应码: 302");
-        if (tl_thread_idx != -1) LOG_VERBOSE("重定向至: %s", g_prog_status[tl_thread_idx].last_location);
+        if (tl_thread_idx > -1) LOG_VERBOSE("重定向至: %s", g_prog_status[tl_thread_idx].last_location);
         resp.status = REQUEST_REDIRECT;
         return resp;
     }
@@ -494,6 +493,12 @@ http_resp_t get(const char* url)
         resp.status = REQUEST_SUCCESS;
         return resp;
     }
+    if (resp_code == 404)
+    {
+        LOG_VERBOSE("资源不存在, 响应码: 404");
+        resp.status = REQUEST_NOT_FOUND;
+        return resp;
+    }
 
     LOG_ERROR("HTTP 响应错误, 响应码: %ld", resp_code);
     resp.status = REQUEST_ERROR;
@@ -502,16 +507,8 @@ http_resp_t get(const char* url)
 
 NetworkStatus check_network_status()
 {
-    http_resp_t resp = get(s_generate_url);
-    if (resp.curl_code == CURLE_COULDNT_RESOLVE_HOST)
-    {
-        LOG_WARN("DNS 解析错误, 使用备用超时方案重试");
-        resp = get(s_backup_generate_url);
-        if (resp.status == REQUEST_WARN)
-        {
-            resp.status = REQUEST_SUCCESS;
-        }
-    }
+    const http_resp_t resp = get(s_generate_url);
+    if (resp.status == REQUEST_NOT_FOUND) return REQUEST_SUCCESS; // 404代表已连接至互联网
     return resp.status;
 }
 
@@ -532,15 +529,7 @@ NetworkStatus get_last_location()
         if (g_need_exit || !g_thread_keep_alive) return REQUEST_ERROR;
 
         resp = get(s_generate_url); // 检测响应码
-        if (resp.curl_code == CURLE_COULDNT_RESOLVE_HOST)
-        {
-            LOG_WARN("DNS 解析错误, 使用备用超时方案重试");
-            resp = get(s_backup_generate_url);
-            if (resp.status == REQUEST_WARN)
-            {
-                resp.status = REQUEST_SUCCESS;
-            }
-        }
+        if (resp.status == REQUEST_NOT_FOUND) resp.status = REQUEST_SUCCESS; // 404 代表已连接至互联网
         switch (resp.status)
         {
         case REQUEST_REDIRECT:

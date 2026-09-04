@@ -18,21 +18,22 @@ extern bool get_service_mode();
 
 void shut(const int8_t exit_code)
 {
+    LOG_INFO("主程序正在关闭");
     g_need_exit = true;
+
+#if !defined(__OPENWRT__) && !defined(__ANDROID__)
+    if (g_is_webserver_running)
+    {
+        LOG_INFO("关闭 Web 服务器");
+        stop_web_server();
+    }
+#endif
 
     if (g_thread_keep_alive)
     {
+        LOG_INFO("关闭线程守护");
         g_thread_keep_alive = false;
     }
-
-    // On Android, we don't want to call exit() as it kills the whole app.
-    // We just set the flags and let the threads join in work() or stopNative.
-#if defined(__ANDROID__)
-    LOG_INFO("正在请求原生组件停止...");
-    return;
-#endif
-
-    LOG_INFO("主程序正在关闭");
     LOG_INFO("清理资源中");
     LOG_DEBUG("关闭线程");
     for (uint8_t i = 0; i < g_prog_cnt; i++)
@@ -59,7 +60,9 @@ void shut(const int8_t exit_code)
     }
 #endif
 
+#ifndef __ANDROID__
     exit(exit_code);
+#endif
 }
 
 #ifdef _WIN32
@@ -126,6 +129,7 @@ static void signal_handler(const int sig)
 
 void init_shutdown_hook()
 {
+#ifndef __ANDROID__
 #ifdef _WIN32
     if (SetConsoleCtrlHandler(console_handler, TRUE) == 0)
     {
@@ -153,5 +157,6 @@ void init_shutdown_hook()
         fprintf(stderr, "[ERROR] 信号 SIGQUIT 设置失败\n");
         exit(1);
     }
+#endif
 #endif
 }

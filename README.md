@@ -1,6 +1,6 @@
 ## ESurfingClient-CVersion Android 移植总结
 
-本项目已成功将原始 C 语言编写的天翼校园网认证客户端(来自[BadGhost520](https://github.com/BadGhost520))移植为 Android 原生应用(APK)。通过 JNI 桥接和 Android 前台服务，实现了无须 shell 或 Root 权限的稳定后台认证。
+本项目已成功将原始 C 语言编写的天翼校园网认证客户端(来自[BadGhost520](https://github.com/BadGhost520))移植为 Android 原生应用(APK)。通过 JNI 桥接和 Android 前台服务，实现了无须 shell 或 Root 权限的校园网拨号认证。
 
 [转到原作者的项目](https://github.com/BadGhost520/ESurfingClient-CVersion) | [回到原先我修改的分支](https://github.com/anshenglv/ESurfingClient-CVersion-Android-arm-v8a)
 
@@ -11,32 +11,29 @@
 ### 1. 核心架构变更
 - 构建系统：从纯 CMake 迁移至 Android Gradle + CMake (NDK) 体系。
 - 输出格式：由可执行二进制文件转变为共享库 (.so)，通过 JNI 被 Android 应用调用。
-- 运行模式：采用 Android 前台服务 (Foreground Service) 包装 C 逻辑，确保认证进程在后台不被系统挂起，并提供持续的通知栏显示。
-### 2. 原生 C 代码优化 (Native Layer)
-- 权限解耦 (免 Root)：
-  - 重构了 PlatformUtils.c 和 Logger.c。
-  - 废弃了 /data/local/tmp 等硬编码路径，改为接收 Android 传递的应用私有数据目录 (filesDir)。这使得应用在未 Root 的普通手机上也能读写配置和日志。
-- 优雅退出机制：
-  - 修改了 Shutdown.c，在 Android 环境下禁用 exit() 调用，避免原生代码崩溃导致整个 App 闪退。
-  - 优化了 sleep_ms 逻辑，使其能即时响应退出信号，实现秒级停止。
-  - 在 work() 函数末尾增加了子线程回收 (pthread_join) 逻辑，确保清理和登出 (term()) 流程完整。
+- 运行模式：采用 Android 前台服务 (Foreground Service) 包装 C 逻辑，并提供持续的通知栏显示。
+### 2. 原生 C 代码处理 (Native Laye
+- 尽量少地改动原始C代码，非必要问题不处理，方便日后同步更新。
+- 添加了一堆#ifdef __ANDROID__，用来避免执行没有的功能和没有的路径。
+- 不在Android上使用Web前端功能。
 - 日志系统：增加了 Android 日志 (__android_log_print) 支持，方便在 Logcat 中调试。
 ### 3. JNI 桥接层设计
-- 异步运行：在 native-lib.cpp 中创建独立的 pthread 运行 work() 循环，避免阻塞 Android UI 线程。
-- 状态同步：通过原子标志位 (g_thread_keep_alive) 同步 Java 层与 C 层的运行状态。
+- shut()退出逻辑重构，避免整个应用被阻塞和闪退。
+- 状态同步：通过原子标志位(g_thread_keep_alive)
+同步Java层与C层的运行状态，同步防止用户点击了停止后又立即启动。
 ### 4. Android UI/UX 实现
 - 实时日志查看器：
-  - 实现了每秒自动刷新机制，直接从 run.log 读取原生输出。
-  - 双指缩放：支持通过捏合手势实时调整日志字体大小。
-  - 自动滚动：日志更新时自动保持在最底部。
+  - 只有在服务运行时每0.5秒自动从run.log读取日志并同步到应用层。
+  - “清除日志”清除的是历史日志并清空run.log，历史日志(已被重命名为时间的)可供root用户自行查找。
+  - 双指缩放：支持通过捏合手势实时调整日志字体大小，但是最好横向捏合，新版compose纵向容易误触滑动。
 - 多语言支持：建立了完善的 strings.xml 资源体系，支持 中文 / 英文 根据系统语言自动切换。
 - 沉浸式设计：
   - 适配 Edge-to-Edge 全屏显示。
-  - 智能状态栏：Home 页随深/浅模式切换，日志页自动切换至全屏黑底白字模式，防止状态栏遮挡。
+  - 沉浸式状态栏，自动切换深浅色。
+  - 安卓12+可以根据手机背景动态取色，否则显示默认紫色主题色。
 ### 5. 体积与性能优化
-- 体积削减：通过 R8 混淆、资源压缩以及原生库剥离调试符号（Symbol Stripping），将 APK 体积从初始的 15MB 压缩至 5.9MB。
-- 架构精简：针对性优化了 arm64-v8a 指令集。
-- 依赖管理：通过 CMake 静态链接 CURL 和 OpenSSL，解决了 Android 环境下 SSL 依赖缺失的问题。
+- 可能是用了新版的库编译，编译的静态库太大，不然apk可以到4MB左右。
+- 架构精简：只编译了 arm64-v8a 指令集。
 ### 6. 安全与权限
 - 适配 Android 13/14+：
   - 正确声明了 FOREGROUND_SERVICE_SPECIAL_USE。

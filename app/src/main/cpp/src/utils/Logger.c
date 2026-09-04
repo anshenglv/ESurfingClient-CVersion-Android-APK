@@ -24,6 +24,19 @@ static log_cfg_t s_logger_cfg = {
     .cur_lines = 0
 };
 
+#ifdef __ANDROID__
+static char s_android_log_base_dir[PATH_MAX] = "";
+
+void set_log_base_dir(const char* dir)
+{
+    if (dir)
+    {
+        strncpy(s_android_log_base_dir, dir, PATH_MAX - 1);
+        s_android_log_base_dir[PATH_MAX - 1] = '\0';
+    }
+}
+#endif
+
 static const char* get_level_str(const LogLevel lv)
 {
     switch (lv)
@@ -59,27 +72,8 @@ static void rotate()
     if (s_logger_cfg.file_handle == NULL) fprintf(stderr, "[ERROR] 无法在轮转后重新打开日志文件 %s\n", s_logger_cfg.log_file);
 }
 
-static char s_base_dir[PATH_MAX] = "";
-
-void set_log_base_dir(const char* dir)
-{
-    if (dir == NULL) return;
-    snprintf(s_base_dir, sizeof(s_base_dir), "%s", dir);
-}
-
 static bool get_log_dir(char* out)
 {
-    if (s_base_dir[0] != '\0')
-    {
-        snprintf(out, PATH_MAX, "%s/logs", s_base_dir);
-        struct stat st;
-        if (stat(out, &st) != 0)
-        {
-            if (mkdir(s_base_dir, 0755) != 0 && errno != EEXIST) return false;
-            if (mkdir(out, 0755) != 0 && errno != EEXIST) return false;
-        }
-        return true;
-    }
 #ifdef _WIN32
     char dir[PATH_MAX];
     if (get_exec_dir(dir) == false) return false;
@@ -91,7 +85,7 @@ static bool get_log_dir(char* out)
         if (err != ERROR_ALREADY_EXISTS) return false;
     }
 #elif defined(__ANDROID__)
-    const char dir[] = "/data/local/tmp/esurfing";
+    const char* dir = strlen(s_android_log_base_dir) > 0 ? s_android_log_base_dir : "/data/local/tmp/esurfing";
     const uint16_t len = snprintf(out, PATH_MAX, "%s%clogs", dir, SEP);
     if ((size_t)len >= PATH_MAX) return false;
     struct stat st;
@@ -212,11 +206,7 @@ bool init_logger()
     s_logger_cfg.file_handle = fopen(s_logger_cfg.log_file, "a");
     if (!s_logger_cfg.file_handle)
     {
-#if defined(__ANDROID__)
-        fprintf(stderr, "[ERROR] 无法打开日志文件 %s, 请使用 root 权限运行程序\n", s_logger_cfg.log_file);
-#else
         fprintf(stderr, "[ERROR] 无法打开日志文件 %s, 如果是 Linux 系统请使用 sudo 运行程序\n", s_logger_cfg.log_file);
-#endif
         return false;
     }
     LOG_DEBUG("日志系统初始化完成");

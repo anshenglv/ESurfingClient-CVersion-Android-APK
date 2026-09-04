@@ -20,21 +20,29 @@
 #endif
 
 #ifdef __OPENWRT__
-static const char default_config_file[] = "/etc/config/esurfingclient";
+static const char config_file[] = "/etc/config/esurfingclient";
 #elif defined(__ANDROID__)
-static const char default_config_file[] = "/data/local/tmp/esurfing/ESurfingClient.json";
-#else
-#define DIALER_CONFIG_FILE "ESurfingClient.json"
-static char default_config_file[PATH_MAX + 1 + sizeof(DIALER_CONFIG_FILE)];
-#endif
-
-static char config_file[PATH_MAX] = "";
+static char config_file[PATH_MAX] = "/data/local/tmp/esurfing/ESurfingClient.json";
+static char s_android_base_dir[PATH_MAX] = "/data/local/tmp/esurfing";
 
 void set_base_dir(const char* dir)
 {
-    if (dir == NULL) return;
-    snprintf(config_file, sizeof(config_file), "%s/ESurfingClient.json", dir);
+    if (dir)
+    {
+        strncpy(s_android_base_dir, dir, PATH_MAX - 1);
+        s_android_base_dir[PATH_MAX - 1] = '\0';
+        snprintf(config_file, PATH_MAX, "%s/ESurfingClient.json", s_android_base_dir);
+    }
 }
+#else
+#define DIALER_CONFIG_FILE "ESurfingClient.json"
+static char config_file[PATH_MAX + 1 + sizeof(DIALER_CONFIG_FILE)];
+#endif
+
+#define WINDOWS_UA "CCTP/WinSVR5/1068"
+#define LINUX_UA "CCTP/Linux64/1003"
+#define OLD_ANDROID_UA "CCTP/android64_vpn/2093"
+#define ANDROID_UA "CCTP/android11_64/2104"
 
 typedef struct
 {
@@ -278,33 +286,44 @@ void sleep_ms(const uint64_t ms, const bool can_stop)
 {
     if (ms == 0) return;
 
-    uint64_t elapsed = 0;
-    const uint64_t SEGMENT_MS = 100;
-
-    while (elapsed < ms)
+    if (can_stop)
     {
-        if (can_stop || true) // Force check exit flags even if can_stop was false
-        {
-            if (g_need_exit || !g_thread_keep_alive) return;
+        uint64_t elapsed = 0;
 
-            if (tl_thread_idx != -1 && g_prog_status)
+        while (elapsed < ms && g_thread_keep_alive)
+        {
+            if (tl_thread_idx > -1)
             {
-                if (g_prog_status[tl_thread_idx].runtime_status.is_running == false ||
-                    g_prog_status[tl_thread_idx].runtime_status.is_need_reset)
+                if (g_prog_status[tl_thread_idx].runtime_status.is_running == false || g_prog_status[tl_thread_idx].runtime_status.is_need_reset)
                 {
                     return;
                 }
             }
-        }
-
-        const uint64_t sleep_time = (ms - elapsed < SEGMENT_MS) ? (ms - elapsed) : SEGMENT_MS;
+            else
+            {
+                if (g_need_exit)
+                {
+                    return;
+                }
+            }
+            const uint64_t SEGMENT_MS = 100;
+            const uint64_t sleep_time = ms - elapsed < SEGMENT_MS ? ms - elapsed : SEGMENT_MS;
 
 #ifdef _WIN32
-        Sleep(sleep_time);
+            Sleep(sleep_time);
 #else
-        usleep(sleep_time * 1000);
+            usleep(sleep_time * 1000);
 #endif
-        elapsed += sleep_time;
+            elapsed += sleep_time;
+        }
+    }
+    else
+    {
+#ifdef _WIN32
+        Sleep(ms);
+#else
+        usleep(ms * 1000);
+#endif
     }
 }
 
@@ -525,44 +544,41 @@ bool save_cfg(char* configs_str)
 
 bool load_cfg()
 {
-    if (config_file[0] == '\0')
-    {
 #ifndef __OPENWRT__
+
 #ifndef __ANDROID__
-        char dir[PATH_MAX];
-        if (get_exec_dir(dir) == false)
+
+    char dir[PATH_MAX];
+    if (get_exec_dir(dir) == false)
+    {
+        LOG_ERROR("获取可执行文件路径失败, 请检查权限后重启");
+        while (true)
         {
-            LOG_ERROR("获取可执行文件路径失败, 请检查权限后重启");
-            while (true)
+            if (g_need_exit)
             {
-                if (g_need_exit)
-                {
-                    return false;
-                }
-                sleep_ms(10000, true);
+                return false;
             }
+            sleep_ms(10000,true);
         }
-        snprintf(config_file, PATH_MAX, "%s%c%s", safe_str(dir), SEP, "ESurfingClient.json");
-#else
-        // 在 Android 上确保配置目录存在
-        if (mkdir("/data/local/tmp/esurfing", 0755) != 0 && errno != EEXIST)
-        {
-            LOG_ERROR("无法创建配置目录, 请检查权限后重启");
-            while (true)
-            {
-                if (g_need_exit)
-                {
-                    return false;
-                }
-                sleep_ms(10000, true);
-            }
-        }
-        snprintf(config_file, PATH_MAX, "/data/local/tmp/esurfing/ESurfingClient.json");
-#endif
-#else
-        snprintf(config_file, PATH_MAX, "/etc/config/esurfingclient");
-#endif
     }
+    snprintf(config_file, PATH_MAX + 1 + sizeof(DIALER_CONFIG_FILE), "%s%c%s", safe_str(dir), SEP, DIALER_CONFIG_FILE);
+#else
+    // 在 Android 上确保配置目录存在
+    if (mkdir(s_android_base_dir, 0755) != 0 && errno != EEXIST)
+    {
+        LOG_ERROR("无法创建配置目录 %s, 请检查权限后重启", s_android_base_dir);
+        while (true)
+        {
+            if (g_need_exit)
+            {
+                return false;
+            }
+            sleep_ms(10000, true);
+        }
+    }
+#endif
+
+#endif
 
     FILE* cfg_file = fopen(config_file, "r");
     if (!cfg_file || fgetc(cfg_file) == EOF)
@@ -749,16 +765,19 @@ bool load_cfg()
         // 转化成 UA
         if (strcmp(g_prog_status[valid_i].login_cfg.chn, "pc") == 0)
         {
-            snprintf(g_prog_status[valid_i].login_cfg.user_agent, USER_AGENT_LEN, "CCTP/Linux64/1003");
-            LOG_DEBUG("使用 UA: %s", g_prog_status[valid_i].login_cfg.user_agent);
-            LOG_DEBUG("当前使用下标: %" PRIu8, valid_i);
+            snprintf(g_prog_status[valid_i].login_cfg.user_agent, USER_AGENT_LEN, LINUX_UA);
         }
-        else
+        else if (strcmp(g_prog_status[0].login_cfg.chn, "phone") == 0)
         {
-            snprintf(g_prog_status[valid_i].login_cfg.user_agent, USER_AGENT_LEN, "CCTP/android64_vpn/2093");
-            LOG_DEBUG("使用 UA: %s", g_prog_status[valid_i].login_cfg.user_agent);
-            LOG_DEBUG("当前使用下标: %" PRIu8, valid_i);
+            snprintf(g_prog_status[valid_i].login_cfg.user_agent, USER_AGENT_LEN, ANDROID_UA);
         }
+        else // windows 通道占位
+        {
+            snprintf(g_prog_status[valid_i].login_cfg.user_agent, USER_AGENT_LEN, ANDROID_UA);
+        }
+
+        LOG_INFO("使用 UA: %s", g_prog_status[valid_i].login_cfg.user_agent);
+        LOG_DEBUG("当前使用下标: %" PRIu8, valid_i);
 
         // 检查标记值
         if (mark == NULL)
@@ -861,16 +880,19 @@ bool load_cfg()
         // 转化成 UA
         if (strcmp(g_prog_status[0].login_cfg.chn, "pc") == 0)
         {
-            snprintf(g_prog_status[0].login_cfg.user_agent, USER_AGENT_LEN, "CCTP/Linux64/1003");
-            LOG_DEBUG("使用 UA: %s", g_prog_status[0].login_cfg.user_agent);
-            LOG_DEBUG("当前使用下标: 0");
+            snprintf(g_prog_status[0].login_cfg.user_agent, USER_AGENT_LEN, LINUX_UA);
         }
-        else
+        else if (strcmp(g_prog_status[0].login_cfg.chn, "phone") == 0)
         {
-            snprintf(g_prog_status[0].login_cfg.user_agent, USER_AGENT_LEN, "CCTP/android64_vpn/2093");
-            LOG_DEBUG("使用 UA: %s", g_prog_status[0].login_cfg.user_agent);
-            LOG_DEBUG("当前使用下标: 0");
+            snprintf(g_prog_status[0].login_cfg.user_agent, USER_AGENT_LEN, ANDROID_UA);
         }
+        else // windows 通道占位
+        {
+            snprintf(g_prog_status[0].login_cfg.user_agent, USER_AGENT_LEN, ANDROID_UA);
+        }
+
+        LOG_INFO("使用 UA: %s", g_prog_status[0].login_cfg.user_agent);
+        LOG_DEBUG("当前使用下标: 0");
 
         g_prog_status[0].login_cfg.idx = 1;
         LOG_INFO("配置 %" PRIu8 " 可用, 将会尝试使用", i + 1);

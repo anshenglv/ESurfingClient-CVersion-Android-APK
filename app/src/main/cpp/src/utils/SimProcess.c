@@ -1,16 +1,12 @@
+#include "utils/PlatformUtils.h"
 #include "utils/SimProcess.h"
-
-#ifdef _WIN32
-#include <process.h>
-#endif
 
 #include <stdio.h>
 #include <stdlib.h>
 
-#include "utils/PlatformUtils.h"
-
 #ifdef _WIN32
 #include <windows.h>
+#include <process.h>
 #else
 #include <unistd.h>
 #endif

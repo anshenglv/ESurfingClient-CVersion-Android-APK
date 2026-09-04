@@ -8,7 +8,7 @@
 
 extern void work(void);
 
-#if !defined(__OPENWRT__) && !defined(__ANDROID__)
+#ifndef __OPENWRT__
 
 static void PrintUsage()
 {
@@ -21,7 +21,7 @@ static void PrintUsage()
 
 #endif
 
-int main(int argc, char *argv[])
+int main(const int argc, char *argv[])
 {
     g_start_run_tm = get_cur_tm_ms(); // 获取开始运行的时间
 
@@ -31,7 +31,7 @@ int main(int argc, char *argv[])
 
 #endif
 
-#if !defined(__OPENWRT__) && !defined(__ANDROID__)
+#ifndef __OPENWRT__
 
     if (argc > 1)
     {
@@ -57,9 +57,9 @@ int main(int argc, char *argv[])
 
 #ifdef _WIN32
 
-    SERVICE_TABLE_ENTRY ServiceTable[] = {
-        {SERVICE_NAME, (LPSERVICE_MAIN_FUNCTION)ServiceMain},
-        {NULL, NULL}
+    const SERVICE_TABLE_ENTRY ServiceTable[] = {
+        {.lpServiceName = SERVICE_NAME, .lpServiceProc = (LPSERVICE_MAIN_FUNCTION)ServiceMain},
+        {.lpServiceName = NULL, .lpServiceProc = NULL}
     };
     if (StartServiceCtrlDispatcher(ServiceTable))
     {

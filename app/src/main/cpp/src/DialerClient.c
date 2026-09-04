@@ -658,7 +658,7 @@ void work()
     if (init_logger() == false) return; // 初始化日志系统
 
     LOG_INFO("-------------------------------------------------------------------");
-    LOG_INFO(" - 程序版本: " PROGRAM_FULL_VERSION);
+    LOG_INFO(" - 程序版本: 2.0.6-r1" );
     LOG_INFO(" - 本程序由 BadGhost (鬼鬼) 制作, 遵循 Apache-2.0 开源协议");
     LOG_INFO(" - 项目地址: https://github.com/BadGhost520/ESurfingClient-CVersion");
     LOG_INFO(" - 制作不易, 赞助鬼鬼, 让鬼鬼更好地去维护更新这个项目罢~");
@@ -799,23 +799,14 @@ void work()
         check_time += 10;
     }
     LOG_INFO("线程守护已关闭");
-
-    // 停止所有子线程
-    for (uint8_t i = 0; i < g_prog_cnt; i++)
+#if !defined(__ANDROID__)
+    while (g_thread_keep_alive == false
+#ifdef _WIN32
+        && get_service_mode() == false
+#endif
+        )
     {
-        if (g_prog_status[i].runtime_status.is_running)
-        {
-            LOG_DEBUG("正在停止认证线程 %d", i);
-            g_prog_status[i].runtime_status.is_running = false;
-            int result_code = 0;
-            sim_thread_join(g_prog_status[i].thread, &result_code);
-        }
+        sleep_ms(10000, false);
     }
-
-    if (g_prog_status) {
-        free(g_prog_status);
-        g_prog_status = NULL;
-    }
-
-    clean_logger();
+#endif
 }

@@ -1,286 +1,78 @@
 package com.esurfingclient.ans
 
 import android.Manifest
+import android.annotation.SuppressLint
 import android.content.Intent
 import android.content.pm.PackageManager
-import android.content.res.Configuration
-import android.graphics.Color
 import android.os.Build
 import android.os.Bundle
-import android.os.Handler
-import android.os.Looper
-import android.util.TypedValue
-import android.view.ScaleGestureDetector
-import android.view.View
 import android.widget.Toast
-import androidx.appcompat.app.AppCompatActivity
-import androidx.core.app.ActivityCompat
+import androidx.activity.ComponentActivity
+import androidx.activity.compose.setContent
+import androidx.activity.enableEdgeToEdge
+import androidx.activity.result.contract.ActivityResultContracts
+import androidx.compose.foundation.gestures.detectDragGestures
+import androidx.compose.foundation.gestures.detectTransformGestures
+import androidx.compose.foundation.isSystemInDarkTheme
+import androidx.compose.foundation.layout.*
+import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.selection.toggleable
+import androidx.compose.foundation.shape.CircleShape
+import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.verticalScroll
+import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.filled.Delete
+import androidx.compose.material.icons.filled.Home
+import androidx.compose.material.icons.filled.Info
+import androidx.compose.material.icons.filled.NotInterested
+import androidx.compose.material.icons.filled.PlayArrow
+import androidx.compose.material.icons.filled.Stop
+import androidx.compose.material3.*
+import androidx.compose.runtime.*
+import androidx.compose.ui.Alignment
+import androidx.compose.ui.Modifier
+import androidx.compose.ui.draw.drawWithContent
+import androidx.compose.ui.geometry.CornerRadius
+import androidx.compose.ui.geometry.Offset
+import androidx.compose.ui.geometry.Size
+import androidx.compose.ui.graphics.Color
+import androidx.compose.ui.input.pointer.pointerInput
+import androidx.compose.ui.layout.onGloballyPositioned
+import androidx.compose.ui.platform.LocalConfiguration
+import androidx.compose.ui.platform.LocalContext
+import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.tooling.preview.Preview
+import androidx.compose.ui.unit.IntOffset
+import androidx.compose.ui.unit.dp
+import androidx.compose.ui.unit.em
+import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
-import androidx.core.view.ViewCompat
-import androidx.core.view.WindowCompat
-import androidx.core.view.WindowInsetsCompat
-import androidx.core.view.WindowInsetsControllerCompat
-import com.esurfingclient.ans.databinding.ActivityMainBinding
-import org.json.JSONArray
-import org.json.JSONObject
-import java.io.File
+import androidx.lifecycle.viewmodel.compose.viewModel
+import com.esurfingclient.ans.ui.theme.ESurfingTheme
+import kotlin.math.roundToInt
 
-class MainActivity : AppCompatActivity() {
+class MainActivity : ComponentActivity() {
 
-    private lateinit var binding: ActivityMainBinding
-    private val handler = Handler(Looper.getMainLooper())
-    private var logFontSize = 8f
-    private lateinit var scaleGestureDetector: ScaleGestureDetector
-
-    private val logUpdater = object : Runnable {
-        override fun run() {
-            updateLogs()
-            handler.postDelayed(this, 1000)
+    private val requestPermissionLauncher = registerForActivityResult(
+        ActivityResultContracts.RequestPermission()
+    ) { isGranted: Boolean ->
+        if (isGranted) {
+            startESurfingService()
         }
     }
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-
-        // Allow drawing behind system bars
-        WindowCompat.setDecorFitsSystemWindows(window, false)
-
-        binding = ActivityMainBinding.inflate(layoutInflater)
-        setContentView(binding.root)
-
-        // Get Action Bar Height from attributes
-        val tv = TypedValue()
-        val actionBarHeight = if (theme.resolveAttribute(android.R.attr.actionBarSize, tv, true)) {
-            TypedValue.complexToDimensionPixelSize(tv.data, resources.displayMetrics)
-        } else {
-            0
-        }
-
-        // Handle Window Insets for Notch/Status bar
-        ViewCompat.setOnApplyWindowInsetsListener(binding.rootLayout) { _, insets ->
-            val statusBarHeight = insets.getInsets(WindowInsetsCompat.Type.statusBars()).top
-            val navBarHeight = insets.getInsets(WindowInsetsCompat.Type.navigationBars()).bottom
-            
-            // Adjust spacer for Log page
-            binding.statusBarSpacer.layoutParams.height = statusBarHeight
-            binding.statusBarSpacer.requestLayout()
-            
-            // Adjust toolbar padding for Home page (instant visibility management)
-            binding.toolbar.setPadding(0, statusBarHeight, 0, 0)
-            binding.toolbar.layoutParams.height = actionBarHeight + statusBarHeight
-            binding.toolbar.requestLayout()
-            
-            // Adjust padding for bottom nav to avoid overlapping with gesture bar/nav bar
-            binding.bottomNav.setPadding(0, 0, 0, navBarHeight)
-            
-            insets
-        }
-
-        // Setup Bottom Navigation
-        binding.bottomNav.setOnItemSelectedListener { item ->
-            when (item.itemId) {
-                R.id.nav_home -> {
-                    showHome()
-                    true
-                }
-                R.id.nav_logs -> {
-                    showLogs()
-                    true
-                }
-                else -> false
-            }
-        }
-
-        binding.btnSave.setOnClickListener {
-            saveConfig()
-        }
-
-        binding.btnStartStop.setOnClickListener {
-            if (isNativeRunning()) {
-                stopService()
-            } else {
-                checkPermissionAndStart()
-            }
-        }
-
-        binding.btnClearLogs.setOnClickListener {
-            clearLogs()
-        }
-
-        setupPinchToZoom()
-        binding.tvLogs.textSize = logFontSize
-        loadConfigToUI()
+        enableEdgeToEdge()
         
-        // Update button state periodically
-        handler.post(object : Runnable {
-            override fun run() {
-                updateButtonState()
-                handler.postDelayed(this, 500)
-            }
-        })
-        
-        // Default view
-        showHome()
-    }
-
-    private fun updateButtonState() {
-        val running = isNativeRunning()
-        if (binding.pbLoading.visibility == View.VISIBLE) {
-            // We are in the middle of stopping
-            if (!running) {
-                binding.pbLoading.visibility = View.GONE
-                binding.btnStartStop.isEnabled = true
-                binding.btnStartStop.text = getString(R.string.btn_start)
-            }
-        } else {
-            binding.btnStartStop.text = if (running) getString(R.string.btn_stop) else getString(R.string.btn_start)
-        }
-    }
-
-    private fun stopService() {
-        binding.btnStartStop.isEnabled = false
-        binding.btnStartStop.text = ""
-        binding.pbLoading.visibility = View.VISIBLE
-        
-        val intent = Intent(this, ESurfingService::class.java)
-        stopService(intent)
-    }
-
-    private fun showHome() {
-        binding.toolbar.visibility = View.VISIBLE
-        binding.containerHome.visibility = View.VISIBLE
-        binding.containerLogs.visibility = View.GONE
-        
-        updateStatusBar(isLogPage = false)
-    }
-
-    private fun showLogs() {
-        binding.toolbar.visibility = View.GONE
-        binding.containerHome.visibility = View.GONE
-        binding.containerLogs.visibility = View.VISIBLE
-        
-        updateStatusBar(isLogPage = true)
-    }
-
-    private fun updateStatusBar(isLogPage: Boolean) {
-        val windowInsetsController = WindowCompat.getInsetsController(window, window.decorView)
-        if (isLogPage) {
-            window.statusBarColor = Color.BLACK
-            windowInsetsController.isAppearanceLightStatusBars = false // White icons
-        } else {
-            window.statusBarColor = Color.TRANSPARENT
-            
-            val isDarkMode = (resources.configuration.uiMode and Configuration.UI_MODE_NIGHT_MASK) == Configuration.UI_MODE_NIGHT_YES
-            // Use White icons in Light mode, Black icons in Dark mode as requested
-            windowInsetsController.isAppearanceLightStatusBars = isDarkMode
-        }
-    }
-
-    override fun onResume() {
-        super.onResume()
-        handler.post(logUpdater)
-    }
-
-    override fun onPause() {
-        super.onPause()
-        handler.removeCallbacks(logUpdater)
-    }
-
-    private fun clearLogs() {
-        val logDir = File(filesDir, "logs")
-        if (logDir.exists() && logDir.isDirectory) {
-            val files = logDir.listFiles()
-            files?.forEach { file ->
-                if (file.name == "run.log") {
-                    // Clear the content of run.log
-                    try {
-                        file.writeText("")
-                        binding.tvLogs.text = getString(R.string.no_logs)
-                    } catch (e: Exception) {
-                        e.printStackTrace()
-                    }
-                } else {
-                    // Delete other files
-                    file.delete()
-                }
-            }
-            Toast.makeText(this, R.string.logs_cleared, Toast.LENGTH_SHORT).show()
-        }
-    }
-
-    private fun setupPinchToZoom() {
-        scaleGestureDetector = ScaleGestureDetector(this, object : ScaleGestureDetector.SimpleOnScaleGestureListener() {
-            override fun onScale(detector: ScaleGestureDetector): Boolean {
-                logFontSize *= detector.scaleFactor
-                logFontSize = logFontSize.coerceIn(4f, 20f)
-                binding.tvLogs.textSize = logFontSize
-                return true
-            }
-        })
-
-        binding.scrollLogs.setOnTouchListener { v, event ->
-            scaleGestureDetector.onTouchEvent(event)
-            v.performClick()
-            false 
-        }
-    }
-
-    private fun updateLogs() {
-        val logFile = File(filesDir, "logs/run.log")
-        if (logFile.exists()) {
-            try {
-                val lines = logFile.readLines().takeLast(200)
-                val logContent = lines.joinToString("\n")
-                if (binding.tvLogs.text.toString() != logContent) {
-                    binding.tvLogs.text = logContent
-                    binding.scrollLogs.post {
-                        binding.scrollLogs.fullScroll(View.FOCUS_DOWN)
-                    }
-                }
-            } catch (e: Exception) {
-            }
-        }
-    }
-
-    private fun saveConfig() {
-        val username = binding.etUsername.text.toString()
-        val password = binding.etPassword.text.toString()
-        val channel = binding.switch1.isChecked
-
-        val config = JSONObject()
-        config.put("enabled", true)
-        config.put("log_lv", 4)
-
-        val accounts = JSONArray()
-        val account = JSONObject()
-        account.put("username", username)
-        account.put("password", password)
-        if(channel) {account.put("channel", "pc")}
-        else {account.put("channel", "phone")}
-        account.put("mark", "")
-        accounts.put(account)
-
-        config.put("accounts", accounts)
-
-        val configFile = File(filesDir, "ESurfingClient.json")
-        configFile.writeText(config.toString(4))
-        Toast.makeText(this, R.string.config_saved, Toast.LENGTH_SHORT).show()
-    }
-
-    private fun loadConfigToUI() {
-        val configFile = File(filesDir, "ESurfingClient.json")
-        if (configFile.exists()) {
-            try {
-                val config = JSONObject(configFile.readText())
-                val accounts = config.getJSONArray("accounts")
-                if (accounts.length() > 0) {
-                    val account = accounts.getJSONObject(0)
-                    binding.etUsername.setText(account.getString("username"))
-                    binding.etPassword.setText(account.getString("password"))
-                    binding.switch1.isChecked = account.getString("channel") == "pc"
-                }
-            } catch (e: Exception) {
-                e.printStackTrace()
+        setContent {
+            ESurfingTheme {
+                MainScreen(
+                    onStartClick = { checkPermissionAndStart() },
+                    onStopClick = { stopESurfingService() }
+                )
             }
         }
     }
@@ -288,26 +80,22 @@ class MainActivity : AppCompatActivity() {
     private fun checkPermissionAndStart() {
         if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.TIRAMISU) {
             if (ContextCompat.checkSelfPermission(this, Manifest.permission.POST_NOTIFICATIONS) != PackageManager.PERMISSION_GRANTED) {
-                ActivityCompat.requestPermissions(this, arrayOf(Manifest.permission.POST_NOTIFICATIONS), 101)
+                requestPermissionLauncher.launch(Manifest.permission.POST_NOTIFICATIONS)
                 return
             }
         }
-        startService()
+        startESurfingService()
     }
 
-    private fun startService() {
+    private fun startESurfingService() {
         val intent = Intent(this, ESurfingService::class.java)
         ContextCompat.startForegroundService(this, intent)
     }
 
-    override fun onRequestPermissionsResult(requestCode: Int, permissions: Array<out String>, grantResults: IntArray) {
-        super.onRequestPermissionsResult(requestCode, permissions, grantResults)
-        if (requestCode == 101 && grantResults.isNotEmpty() && grantResults[0] == PackageManager.PERMISSION_GRANTED) {
-            startService()
-        }
+    private fun stopESurfingService() {
+        val intent = Intent(this, ESurfingService::class.java)
+        stopService(intent)
     }
-
-    private external fun isNativeRunning(): Boolean
 
     external fun stringFromJNI(): String
 
@@ -315,5 +103,443 @@ class MainActivity : AppCompatActivity() {
         init {
             System.loadLibrary("ans")
         }
+    }
+}
+
+@Composable
+fun MainScreen(
+    onStartClick: () -> Unit,
+    onStopClick: () -> Unit,
+    viewModel: MainViewModel = viewModel()
+) {
+    val context = LocalContext.current
+    MainScreenContent(
+        onStartClick = onStartClick,
+        onStopClick = onStopClick,
+        username = viewModel.username,
+        onUsernameChange = { viewModel.username = it },
+        password = viewModel.password,
+        onPasswordChange = { viewModel.password = it },
+        isPcChannel = viewModel.isPcChannel,
+        onPcChannelChange = { viewModel.isPcChannel = it },
+        onSaveClick = {
+            viewModel.saveConfig()
+            Toast.makeText(context, R.string.config_saved, Toast.LENGTH_SHORT).show()
+        },
+        logContent = viewModel.logContent,
+        logFontSize = viewModel.logFontSize,
+        onClearLogsClick = {
+            viewModel.clearLogs()
+            Toast.makeText(context, R.string.logs_cleared, Toast.LENGTH_SHORT).show()
+        },
+        onLogFontSizeChange = { viewModel.logFontSize = it },
+        serviceStatus = viewModel.serviceStatus,
+        fabPositionX = viewModel.fabPositionX,
+        fabPositionY = viewModel.fabPositionY,
+        onFabPositionSave = { x, y -> viewModel.saveFabPosition(x, y) }
+    )
+}
+
+@SuppressLint("UnusedBoxWithConstraintsScope")
+@OptIn(ExperimentalMaterial3Api::class)
+@Composable
+fun MainScreenContent(
+    onStartClick: () -> Unit,
+    onStopClick: () -> Unit,
+    username: String,
+    onUsernameChange: (String) -> Unit,
+    password: String,
+    onPasswordChange: (String) -> Unit,
+    isPcChannel: Boolean,
+    onPcChannelChange: (Boolean) -> Unit,
+    onSaveClick: () -> Unit,
+    logContent: String,
+    logFontSize: Float,
+    onClearLogsClick: () -> Unit,
+    onLogFontSizeChange: (Float) -> Unit,
+    serviceStatus: ServiceStatus,
+    fabPositionX: Float,
+    fabPositionY: Float,
+    onFabPositionSave: (Float, Float) -> Unit
+) {
+    var selectedItem by remember { mutableIntStateOf(0) }
+
+    BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+        val isWideScreen = maxWidth > 800.dp
+
+        Scaffold(
+            bottomBar = {
+                if (!isWideScreen) {
+                    NavigationBar {
+                        NavigationBarItem(
+                            icon = { Icon(Icons.Filled.Home, contentDescription = null) },
+                            label = { Text(stringResource(R.string.nav_home)) },
+                            selected = selectedItem == 0,
+                            onClick = { selectedItem = 0 }
+                        )
+                        NavigationBarItem(
+                            icon = { Icon(Icons.Filled.Info, contentDescription = null) },
+                            label = { Text(stringResource(R.string.nav_logs)) },
+                            selected = selectedItem == 1,
+                            onClick = { selectedItem = 1 }
+                        )
+                    }
+                }
+            }
+        ) { innerPadding ->
+            if (isWideScreen) {
+                Row(
+                    modifier = Modifier
+                        .fillMaxSize()
+                        .padding(innerPadding)
+                ) {
+                    Box(
+                        modifier = Modifier
+                            .weight(1f, fill = false)
+                            .widthIn(max = 450.dp)
+                            .fillMaxHeight()
+                    ) {
+                        HomeScreenContent(
+                            username = username,
+                            onUsernameChange = onUsernameChange,
+                            password = password,
+                            onPasswordChange = onPasswordChange,
+                            isPcChannel = isPcChannel,
+                            onPcChannelChange = onPcChannelChange,
+                            onStartClick = onStartClick,
+                            onStopClick = onStopClick,
+                            onSaveClick = onSaveClick,
+                            onClearLogsClick = onClearLogsClick,
+                            serviceStatus = serviceStatus
+                        )
+                    }
+                    VerticalDivider(
+                        modifier = Modifier.fillMaxHeight(),
+                        thickness = 1.dp,
+                        color = MaterialTheme.colorScheme.outlineVariant
+                    )
+                    Box(
+                        modifier = Modifier
+                            .weight(1f)
+                            .fillMaxHeight()
+                    ) {
+                        LogScreenContent(
+                            logContent = logContent,
+                            logFontSize = logFontSize,
+                            onLogFontSizeChange = onLogFontSizeChange,
+                            serviceStatus = serviceStatus,
+                            onStartClick = onStartClick,
+                            onStopClick = onStopClick,
+                            fabPositionX = fabPositionX,
+                            fabPositionY = fabPositionY,
+                            onFabPositionSave = onFabPositionSave,
+                            isWideScreen = true
+                        )
+                    }
+                }
+            } else {
+                Column(modifier = Modifier.padding(innerPadding)) {
+                    if (selectedItem == 0) {
+                        HomeScreenContent(
+                            username = username,
+                            onUsernameChange = onUsernameChange,
+                            password = password,
+                            onPasswordChange = onPasswordChange,
+                            isPcChannel = isPcChannel,
+                            onPcChannelChange = onPcChannelChange,
+                            onStartClick = onStartClick,
+                            onStopClick = onStopClick,
+                            onSaveClick = onSaveClick,
+                            onClearLogsClick = onClearLogsClick,
+                            serviceStatus = serviceStatus
+                        )
+                    } else {
+                        LogScreenContent(
+                            logContent = logContent,
+                            logFontSize = logFontSize,
+                            onLogFontSizeChange = onLogFontSizeChange,
+                            serviceStatus = serviceStatus,
+                            onStartClick = onStartClick,
+                            onStopClick = onStopClick,
+                            fabPositionX = fabPositionX,
+                            fabPositionY = fabPositionY,
+                            onFabPositionSave = onFabPositionSave,
+                            isWideScreen = false
+                        )
+                    }
+                }
+            }
+        }
+    }
+}
+
+@Composable
+fun HomeScreenContent(
+    username: String,
+    onUsernameChange: (String) -> Unit,
+    password: String,
+    onPasswordChange: (String) -> Unit,
+    isPcChannel: Boolean,
+    onPcChannelChange: (Boolean) -> Unit,
+    onStartClick: () -> Unit,
+    onStopClick: () -> Unit,
+    onSaveClick: () -> Unit,
+    onClearLogsClick: () -> Unit,
+    serviceStatus: ServiceStatus
+) {
+    Column(
+        modifier = Modifier
+            .fillMaxSize()
+            .padding(start = 16.dp, end = 16.dp)
+            .verticalScroll(rememberScrollState()),
+        verticalArrangement = Arrangement.spacedBy(16.dp),
+        horizontalAlignment = Alignment.CenterHorizontally
+    ) {
+        Text(
+            text = stringResource(R.string.app_name),
+            style = MaterialTheme.typography.headlineMedium,
+            color = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.padding(top = 16.dp)
+        )
+        Card(
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+            shape = RoundedCornerShape(24.dp),
+            modifier = Modifier.fillMaxWidth(),
+            onClick = {}
+        ) {
+            OutlinedTextField(
+                value = username,
+                onValueChange = onUsernameChange,
+                label = { Text(stringResource(R.string.hint_username)) },
+                modifier = Modifier.fillMaxWidth().padding(top= 10.dp, start = 12.dp, end = 12.dp, bottom = 6.dp)
+            )
+
+            OutlinedTextField(
+                value = password,
+                onValueChange = onPasswordChange,
+                label = { Text(stringResource(R.string.hint_password)) },
+                modifier = Modifier.fillMaxWidth().padding(start = 12.dp, end = 12.dp, bottom = 10.dp)
+            )
+
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(start = 12.dp, end = 12.dp, bottom = 6.dp)
+                    .toggleable(
+                        value = isPcChannel,
+                        onValueChange = onPcChannelChange
+                    ),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(stringResource(R.string.channel_use))
+                Switch(
+                    checked = isPcChannel,
+                    onCheckedChange = onPcChannelChange
+                )
+            }
+
+            Button(
+                onClick = onSaveClick,
+                modifier = Modifier.fillMaxWidth().padding(start = 10.dp, end = 10.dp, bottom = 8.dp)
+            ) {
+                Text(stringResource(R.string.btn_save))
+            }
+        }
+        OutlinedButton(
+            onClick = onClearLogsClick,
+            modifier = Modifier.fillMaxWidth(),
+            colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error)
+        ) {
+            Icon(Icons.Filled.Delete, contentDescription = null, modifier = Modifier.size(18.dp))
+            Spacer(Modifier.width(8.dp))
+            Text(stringResource(R.string.btn_clear_logs))
+        }
+
+        Row(
+            modifier = Modifier.fillMaxWidth(),
+            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        ) {
+            Button(
+                onClick = onStartClick,
+                modifier = Modifier.weight(1f),
+                enabled = serviceStatus == ServiceStatus.STOPPED,
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+            ) {
+                Text(stringResource(R.string.btn_start))
+            }
+            Button(
+                onClick = onStopClick,
+                modifier = Modifier.weight(1f),
+                enabled = serviceStatus == ServiceStatus.RUNNING,
+                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+            ) {
+                Text(stringResource(R.string.btn_stop))
+            }
+        }
+    }
+}
+
+@Composable
+fun LogScreenContent(
+    logContent: String,
+    logFontSize: Float,
+    onLogFontSizeChange: (Float) -> Unit,
+    serviceStatus: ServiceStatus,
+    onStartClick: () -> Unit,
+    onStopClick: () -> Unit,
+    fabPositionX: Float,
+    fabPositionY: Float,
+    onFabPositionSave: (Float, Float) -> Unit,
+    isWideScreen: Boolean
+) {
+    val scrollState = rememberScrollState()
+    val isDark = isSystemInDarkTheme()
+    
+    // Auto-scroll to bottom when logs change
+    LaunchedEffect(logContent) {
+        scrollState.animateScrollTo(scrollState.maxValue)
+    }
+
+    Box(modifier = Modifier.fillMaxSize()) {
+        Column(
+            modifier = Modifier
+                .fillMaxSize()
+                .drawWithContent {
+                    drawContent()
+                    if (scrollState.maxValue > 0) {
+                        val viewHeight = size.height
+                        val contentHeight = scrollState.maxValue + viewHeight
+                        val thumbHeight = (viewHeight / contentHeight) * viewHeight
+                        val thumbOffset = (scrollState.value.toFloat() / contentHeight) * viewHeight
+                        
+                        drawRoundRect(
+                            color = (if (isDark) Color.White else Color.Black).copy(alpha = 0.3f),
+                            topLeft = Offset(size.width - 6.dp.toPx(), thumbOffset),
+                            size = Size(4.dp.toPx(), thumbHeight),
+                            cornerRadius = CornerRadius(2.dp.toPx())
+                        )
+                    }
+                }
+                .pointerInput(Unit) {
+                    detectTransformGestures { _, _, zoom, _ ->
+                        onLogFontSizeChange((logFontSize * zoom).coerceIn(4f, 20f))
+                    }
+                }
+                .verticalScroll(scrollState)
+                .padding(8.dp)
+        ) {
+            Text(
+                text = if (logContent.isEmpty()) stringResource(R.string.no_logs) else logContent,
+                fontSize = logFontSize.sp,
+                lineHeight = 1.2.em,
+                fontFamily = FontFamily.Monospace,
+                color = if (isDark) Color.White else Color.Black
+            )
+        }
+
+        DraggableFAB(
+            serviceStatus = serviceStatus,
+            onStartClick = onStartClick,
+            onStopClick = onStopClick,
+            initialX = fabPositionX,
+            initialY = fabPositionY,
+            onPositionSave = onFabPositionSave,
+            isWideScreen = isWideScreen
+        )
+    }
+}
+
+@SuppressLint("UnusedBoxWithConstraintsScope")
+@Composable
+fun DraggableFAB(
+    serviceStatus: ServiceStatus,
+    onStartClick: () -> Unit,
+    onStopClick: () -> Unit,
+    initialX: Float,
+    initialY: Float,
+    onPositionSave: (Float, Float) -> Unit,
+    isWideScreen: Boolean
+) {
+    BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
+        val density = LocalDensity.current
+        val fabSize = with(density) { 56.dp.toPx() }
+        val padding16 = with(density) { 16.dp.toPx() }
+        val padding80 = with(density) { 80.dp.toPx() }
+
+        val maxWidthPx = with(density) { maxWidth.toPx() }
+        val maxHeightPx = with(density) { maxHeight.toPx() }
+
+        var offsetX by remember {
+            mutableFloatStateOf(
+                if (initialX >= 0) initialX.coerceIn(0f, maxWidthPx - fabSize)
+                else maxWidthPx - fabSize - padding16
+            )
+        }
+        var offsetY by remember {
+            mutableFloatStateOf(
+                if (initialY >= 0) initialY.coerceIn(0f, maxHeightPx - fabSize)
+                else maxHeightPx - fabSize - padding80
+            )
+        }
+
+        val icon = when (serviceStatus) {
+            ServiceStatus.STOPPED -> Icons.Filled.PlayArrow
+            ServiceStatus.RUNNING -> Icons.Filled.Stop
+            ServiceStatus.STOPPING -> Icons.Filled.NotInterested
+        }
+
+        val containerColor = when (serviceStatus) {
+            ServiceStatus.STOPPED -> MaterialTheme.colorScheme.primaryContainer
+            ServiceStatus.RUNNING -> MaterialTheme.colorScheme.errorContainer
+            ServiceStatus.STOPPING -> Color.Gray.copy(alpha = 0.5f)
+        }
+
+        val enabled = serviceStatus != ServiceStatus.STOPPING
+
+        if(!isWideScreen) {
+            FloatingActionButton(
+                onClick = { if (serviceStatus == ServiceStatus.STOPPED) onStartClick() else onStopClick() },
+                modifier = Modifier
+                    .offset { IntOffset(offsetX.roundToInt(), offsetY.roundToInt()) }
+                    .pointerInput(Unit) {
+                        detectDragGestures(
+                            onDragEnd = { onPositionSave(offsetX, offsetY) }
+                        ) { change, dragAmount ->
+                            change.consume()
+                            offsetX = (offsetX + dragAmount.x).coerceIn(0f, maxWidthPx - fabSize)
+                            offsetY = (offsetY + dragAmount.y).coerceIn(0f, maxHeightPx - fabSize)
+                        }
+                    },
+                containerColor = if (enabled) containerColor else Color.LightGray,
+                contentColor = if (enabled) contentColorFor(containerColor) else Color.DarkGray,
+                shape = CircleShape
+            ) {
+                Icon(icon, contentDescription = null)
+            }
+        }
+    }
+}
+@Preview(showBackground = true, locale = "zh")
+@Composable
+fun MainScreenPreview() {
+    ESurfingTheme {
+        MainScreenContent(
+            onStartClick = {},
+            onStopClick = {},
+            username = "test_user",
+            onUsernameChange = {},
+            password = "password123",
+            onPasswordChange = {},
+            isPcChannel = false,
+            onPcChannelChange = {},
+            onSaveClick = {},
+            logContent = "Log line 1\nLog line 2\nLog line 3",
+            logFontSize = 12f,
+            onClearLogsClick = {},
+            onLogFontSizeChange = {},
+            serviceStatus = ServiceStatus.STOPPING,
+            fabPositionX = -1f,
+            fabPositionY = -1f,
+            onFabPositionSave = { _, _ -> }
+        )
     }
 }

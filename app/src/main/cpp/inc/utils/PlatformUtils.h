@@ -29,7 +29,7 @@
 #endif
 
 #define XML_BUFFER_SIZE 1024
-#define NAME_LENGTH 128
+#define NAME_LENGTH 256
 
 typedef enum
 {
@@ -50,6 +50,12 @@ typedef struct
     uint8_t* data;
     size_t length;
 } bytes_t;
+
+/**
+ * @brief 设置基础目录 (Android)
+ * @param dir 目录路径
+ */
+void set_base_dir(const char* dir);
 
 /**
  * @brief 打包适配器数据
@@ -155,12 +161,6 @@ char* clean_CDATA(const char* text);
  * @param configs_str 配置文件字符串
  */
 bool save_cfg(char* configs_str);
-
-/**
- * @brief 设置基础路径
- * @param dir 路径
- */
-void set_base_dir(const char* dir);
 
 /**
  * @brief 加载配置文件

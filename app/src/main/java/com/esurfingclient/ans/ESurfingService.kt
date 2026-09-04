@@ -9,6 +9,10 @@ import android.os.Build
 import android.os.IBinder
 import androidx.core.app.NotificationCompat
 
+enum class ServiceStatus {
+    STOPPED, RUNNING, STOPPING
+}
+
 class ESurfingService : Service() {
 
     override fun onCreate() {
@@ -33,15 +37,13 @@ class ESurfingService : Service() {
     override fun onBind(intent: Intent?): IBinder? = null
 
     private fun createNotificationChannel() {
-        if (Build.VERSION.SDK_INT >= Build.VERSION_CODES.O) {
-            val serviceChannel = NotificationChannel(
-                CHANNEL_ID,
-                getString(R.string.app_name) + " Service Channel",
-                NotificationManager.IMPORTANCE_DEFAULT
-            )
-            val manager = getSystemService(NotificationManager::class.java)
-            manager.createNotificationChannel(serviceChannel)
-        }
+        val serviceChannel = NotificationChannel(
+            CHANNEL_ID,
+            getString(R.string.app_name) + " Service Channel",
+            NotificationManager.IMPORTANCE_DEFAULT
+        )
+        val manager = getSystemService(NotificationManager::class.java)
+        manager.createNotificationChannel(serviceChannel)
     }
 
     private fun createNotification(content: String): Notification {
@@ -54,9 +56,25 @@ class ESurfingService : Service() {
 
     private external fun startNative(baseDir: String)
     private external fun stopNative()
+    private external fun getNativeStatus(): Int
 
     companion object {
         const val CHANNEL_ID = "ESurfingServiceChannel"
+
+        fun getServiceStatus(): ServiceStatus {
+            // Use a dummy instance to call native method if necessary, 
+            // but since it's a static JNI call in C++, any instance works.
+            // Better to make the JNI method static if possible, but this works for now.
+            return try {
+                when (ESurfingService().getNativeStatus()) {
+                    1 -> ServiceStatus.RUNNING
+                    2 -> ServiceStatus.STOPPING
+                    else -> ServiceStatus.STOPPED
+                }
+            } catch (e: Exception) {
+                ServiceStatus.STOPPED
+            }
+        }
         
         init {
             System.loadLibrary("ans")

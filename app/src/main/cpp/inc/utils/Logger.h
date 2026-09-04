@@ -56,6 +56,12 @@ log_out(LOG_LEVEL_INFO, file, line, fmt, ##__VA_ARGS__)
 log_out(LOG_LEVEL_ERROR, file, line, fmt, ##__VA_ARGS__)
 
 /**
+ * @brief 设置日志基础目录 (Android)
+ * @param dir 目录路径
+ */
+void set_log_base_dir(const char* dir);
+
+/**
  * @brief 打印日志
  * @param level 日志等级
  * @param file 调用的源代码文件名
@@ -78,13 +84,8 @@ LogLevel get_logger_level();
 void set_logger_level(LogLevel lv);
 
 /**
- * @brief 设置日志基础路径
- * @param dir 路径
- */
-void set_log_base_dir(const char* dir);
-
-/**
  * @brief 初始化日志系统
+ * @return 初始化状态
  */
 bool init_logger();
 
