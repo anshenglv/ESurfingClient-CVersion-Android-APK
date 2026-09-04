@@ -7,6 +7,7 @@
 **应用运行示例：**
 
 <img alt="Please refresh" height="569" src="img/Home.jpg" width="256"/> <img alt="Please refresh" height="569" src="img/Log.jpg" width="256"/>
+<img alt="Please refresh" src="img/Full.jpg" width="516"/>
 
 ### 1. 核心架构变更
 - 构建系统：从纯 CMake 迁移至 Android Gradle + CMake (NDK) 体系。
