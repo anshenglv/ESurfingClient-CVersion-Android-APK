@@ -25,7 +25,7 @@ void* start_work_thread(void* arg) {
     g_start_run_tm = get_cur_tm_ms();
     work();
     LOGI("Native thread finished");
-    return NULL;
+    return nullptr;
 }
 
 // 异步停止线程函数
@@ -34,7 +34,7 @@ void* stop_async_thread(void* arg) {
     shut(0);
     s_is_stopping = false;
     LOGI("Async shutdown finished");
-    return NULL;
+    return nullptr;
 }
 
 extern "C" JNIEXPORT jint JNICALL
@@ -52,14 +52,14 @@ Java_com_esurfingclient_ans_ESurfingService_startNative(JNIEnv* env, jobject thi
         return;
     }
 
-    const char* native_base_dir = env->GetStringUTFChars(base_dir, 0);
+    const char* native_base_dir = env->GetStringUTFChars(base_dir, nullptr);
     set_base_dir(native_base_dir);
     set_log_base_dir(native_base_dir);
     LOGI("Base directory set to: %s", native_base_dir);
     env->ReleaseStringUTFChars(base_dir, native_base_dir);
 
     g_need_exit = false;
-    pthread_create(&native_thread, NULL, start_work_thread, NULL);
+    pthread_create(&native_thread, nullptr, start_work_thread, nullptr);
     pthread_detach(native_thread); // 允许线程独立运行
 }
 
@@ -74,7 +74,7 @@ Java_com_esurfingclient_ans_ESurfingService_stopNative(JNIEnv* env, jobject thiz
     LOGI("Starting async stop sequence...");
 
     pthread_t stop_thread;
-    if (pthread_create(&stop_thread, NULL, stop_async_thread, NULL) == 0) {
+    if (pthread_create(&stop_thread, nullptr, stop_async_thread, nullptr) == 0) {
         pthread_detach(stop_thread);
     } else {
         // 如果创建线程失败（极少见），回退到同步模式以确保资源释放
@@ -85,10 +85,10 @@ Java_com_esurfingclient_ans_ESurfingService_stopNative(JNIEnv* env, jobject thiz
     LOGI("stopNative returned to UI thread");
 }
 
-extern "C" JNIEXPORT jstring JNICALL
-Java_com_esurfingclient_ans_MainActivity_stringFromJNI(
-        JNIEnv* env,
-        jobject /* this */) {
-    std::string hello = "ESurfing Client Native Ready";
-    return env->NewStringUTF(hello.c_str());
-}
+//extern "C" JNIEXPORT jstring JNICALL
+//Java_com_esurfingclient_ans_MainActivity_stringFromJNI(
+//        JNIEnv* env,
+//        jobject /* this */) {
+//    std::string hello = "ESurfing Client Native Ready";
+//    return env->NewStringUTF(hello.c_str());
+//}

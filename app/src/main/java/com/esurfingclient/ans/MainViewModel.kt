@@ -3,6 +3,8 @@ package com.esurfingclient.ans
 import android.app.Application
 import android.content.Context
 import androidx.compose.runtime.getValue
+import androidx.compose.runtime.mutableFloatStateOf
+import androidx.compose.runtime.mutableIntStateOf
 import androidx.compose.runtime.mutableStateOf
 import androidx.compose.runtime.setValue
 import androidx.core.content.edit
@@ -22,12 +24,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     var channel by mutableStateOf("3")
     
     var logContent by mutableStateOf("")
-    var logFontSize by mutableStateOf(8f)
+    var logFontSize by mutableFloatStateOf(8f)
 
     var serviceStatus by mutableStateOf(ServiceStatus.STOPPED)
 
-    var fabPositionX by mutableStateOf(-1f)
-    var fabPositionY by mutableStateOf(-1f)
+    var fabPositionX by mutableFloatStateOf(-1f)
+    var fabPositionY by mutableFloatStateOf(-1f)
+    var selectedItem by mutableIntStateOf(0)
 
     private var logJob: Job? = null
     private val context: Context get() = getApplication()
@@ -126,6 +129,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         val prefs = context.getSharedPreferences("ui_prefs", Context.MODE_PRIVATE)
         fabPositionX = prefs.getFloat("fab_x", -1f)
         fabPositionY = prefs.getFloat("fab_y", -1f)
+        selectedItem = prefs.getInt("selected_item", 0)
     }
 
     fun saveFabPosition(x: Float, y: Float) {
@@ -135,6 +139,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         prefs.edit {
             putFloat("fab_x", x)
             putFloat("fab_y", y)
+        }
+    }
+
+    fun saveSelected(selected: Int) {
+        selectedItem = selected
+        val prefs = context.getSharedPreferences("ui_prefs", Context.MODE_PRIVATE)
+        prefs.edit {
+            putInt("selected_item", selected)
         }
     }
 }

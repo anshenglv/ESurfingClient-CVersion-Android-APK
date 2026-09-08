@@ -16,7 +16,6 @@ import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
-import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.verticalScroll
@@ -37,8 +36,6 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
-import androidx.compose.ui.layout.onGloballyPositioned
-import androidx.compose.ui.platform.LocalConfiguration
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.res.stringResource
@@ -97,8 +94,6 @@ class MainActivity : ComponentActivity() {
         stopService(intent)
     }
 
-    external fun stringFromJNI(): String
-
     companion object {
         init {
             System.loadLibrary("ans")
@@ -136,6 +131,8 @@ fun MainScreen(
         serviceStatus = viewModel.serviceStatus,
         fabPositionX = viewModel.fabPositionX,
         fabPositionY = viewModel.fabPositionY,
+        selectedItem = viewModel.selectedItem,
+        onSelectedItemSave = { selected -> viewModel.saveSelected(selected) },
         onFabPositionSave = { x, y -> viewModel.saveFabPosition(x, y) }
     )
 }
@@ -160,9 +157,11 @@ fun MainScreenContent(
     serviceStatus: ServiceStatus,
     fabPositionX: Float,
     fabPositionY: Float,
+    selectedItem: Int,
+    onSelectedItemSave: (Int) -> Unit,
     onFabPositionSave: (Float, Float) -> Unit
 ) {
-    var selectedItem by remember { mutableIntStateOf(0) }
+    var selectedItem by remember { mutableIntStateOf(selectedItem) }
 
     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
         val isWideScreen = maxWidth > 800.dp
@@ -175,13 +174,13 @@ fun MainScreenContent(
                             icon = { Icon(Icons.Filled.Home, contentDescription = null) },
                             label = { Text(stringResource(R.string.nav_home)) },
                             selected = selectedItem == 0,
-                            onClick = { selectedItem = 0 }
+                            onClick = { selectedItem = 0; onSelectedItemSave(0) }
                         )
                         NavigationBarItem(
                             icon = { Icon(Icons.Filled.Info, contentDescription = null) },
                             label = { Text(stringResource(R.string.nav_logs)) },
                             selected = selectedItem == 1,
-                            onClick = { selectedItem = 1 }
+                            onClick = { selectedItem = 1; onSelectedItemSave(1) }
                         )
                     }
                 }
@@ -425,6 +424,9 @@ fun LogScreenContent(
         scrollState.animateScrollTo(scrollState.maxValue)
     }
 
+    val currentLogFontSize by rememberUpdatedState(logFontSize)
+    val currentOnLogFontSizeChange by rememberUpdatedState(onLogFontSizeChange)
+
     Box(modifier = Modifier.fillMaxSize()) {
         Column(
             modifier = Modifier
@@ -447,14 +449,14 @@ fun LogScreenContent(
                 }
                 .pointerInput(Unit) {
                     detectTransformGestures { _, _, zoom, _ ->
-                        onLogFontSizeChange((logFontSize * zoom).coerceIn(4f, 20f))
+                        currentOnLogFontSizeChange((currentLogFontSize * zoom).coerceIn(4f, 20f))
                     }
                 }
                 .verticalScroll(scrollState)
                 .padding(8.dp)
         ) {
             Text(
-                text = if (logContent.isEmpty()) stringResource(R.string.no_logs) else logContent,
+                text = logContent.ifEmpty { stringResource(R.string.no_logs) },
                 fontSize = logFontSize.sp,
                 lineHeight = 1.2.em,
                 fontFamily = FontFamily.Monospace,
@@ -559,13 +561,15 @@ fun MainScreenPreview() {
             onChannelChange = {},
             onSaveClick = {},
             logContent = "Log line 1\nLog line 2\nLog line 3",
-            logFontSize = 12f,
+            logFontSize = 8f,
             onClearLogsClick = {},
             onLogFontSizeChange = {},
             serviceStatus = ServiceStatus.STOPPING,
             fabPositionX = -1f,
             fabPositionY = -1f,
-            onFabPositionSave = { _, _ -> }
+            onFabPositionSave = { _, _ -> },
+            selectedItem = 0,
+            onSelectedItemSave = {}
         )
     }
 }
