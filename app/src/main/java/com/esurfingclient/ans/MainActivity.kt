@@ -120,8 +120,8 @@ fun MainScreen(
         onUsernameChange = { viewModel.username = it },
         password = viewModel.password,
         onPasswordChange = { viewModel.password = it },
-        isPcChannel = viewModel.isPcChannel,
-        onPcChannelChange = { viewModel.isPcChannel = it },
+        channel = viewModel.channel,
+        onChannelChange = { viewModel.channel = it },
         onSaveClick = {
             viewModel.saveConfig()
             Toast.makeText(context, R.string.config_saved, Toast.LENGTH_SHORT).show()
@@ -150,8 +150,8 @@ fun MainScreenContent(
     onUsernameChange: (String) -> Unit,
     password: String,
     onPasswordChange: (String) -> Unit,
-    isPcChannel: Boolean,
-    onPcChannelChange: (Boolean) -> Unit,
+    channel: String,
+    onChannelChange: (String) -> Unit,
     onSaveClick: () -> Unit,
     logContent: String,
     logFontSize: Float,
@@ -204,8 +204,8 @@ fun MainScreenContent(
                             onUsernameChange = onUsernameChange,
                             password = password,
                             onPasswordChange = onPasswordChange,
-                            isPcChannel = isPcChannel,
-                            onPcChannelChange = onPcChannelChange,
+                            channel = channel,
+                            onChannelChange = onChannelChange,
                             onStartClick = onStartClick,
                             onStopClick = onStopClick,
                             onSaveClick = onSaveClick,
@@ -245,8 +245,8 @@ fun MainScreenContent(
                             onUsernameChange = onUsernameChange,
                             password = password,
                             onPasswordChange = onPasswordChange,
-                            isPcChannel = isPcChannel,
-                            onPcChannelChange = onPcChannelChange,
+                            channel = channel,
+                            onChannelChange = onChannelChange,
                             onStartClick = onStartClick,
                             onStopClick = onStopClick,
                             onSaveClick = onSaveClick,
@@ -273,20 +273,31 @@ fun MainScreenContent(
     }
 }
 
+@OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreenContent(
     username: String,
     onUsernameChange: (String) -> Unit,
     password: String,
     onPasswordChange: (String) -> Unit,
-    isPcChannel: Boolean,
-    onPcChannelChange: (Boolean) -> Unit,
+    channel: String,
+    onChannelChange: (String) -> Unit,
     onStartClick: () -> Unit,
     onStopClick: () -> Unit,
     onSaveClick: () -> Unit,
     onClearLogsClick: () -> Unit,
     serviceStatus: ServiceStatus
 ) {
+    var expanded by remember { mutableStateOf(false) }
+    val channels = listOf("1","2","3","4", "5")
+    val channelLabels = mapOf(
+        "1" to "Windows(暂未实现,使用Android通道)",
+        "2" to "Linux",
+        "3" to "Android",
+        "4" to "iOS",
+        "5" to "MacOS"
+    )
+
     Column(
         modifier = Modifier
             .fillMaxSize()
@@ -311,30 +322,45 @@ fun HomeScreenContent(
                 value = username,
                 onValueChange = onUsernameChange,
                 label = { Text(stringResource(R.string.hint_username)) },
-                modifier = Modifier.fillMaxWidth().padding(top= 10.dp, start = 12.dp, end = 12.dp, bottom = 6.dp)
+                modifier = Modifier.fillMaxWidth().padding(top= 8.dp, start = 12.dp, end = 12.dp, bottom = 6.dp)
             )
 
             OutlinedTextField(
                 value = password,
                 onValueChange = onPasswordChange,
                 label = { Text(stringResource(R.string.hint_password)) },
-                modifier = Modifier.fillMaxWidth().padding(start = 12.dp, end = 12.dp, bottom = 10.dp)
+                modifier = Modifier.fillMaxWidth().padding(start = 12.dp, end = 12.dp, bottom = 0.dp)
             )
 
-            Row(
-                modifier = Modifier.fillMaxWidth().padding(start = 12.dp, end = 12.dp, bottom = 6.dp)
-                    .toggleable(
-                        value = isPcChannel,
-                        onValueChange = onPcChannelChange
-                    ),
-                verticalAlignment = Alignment.CenterVertically,
-                horizontalArrangement = Arrangement.SpaceBetween
+            ExposedDropdownMenuBox(
+                expanded = expanded,
+                onExpandedChange = { expanded = !expanded },
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp, vertical = 6.dp)
             ) {
-                Text(stringResource(R.string.channel_use))
-                Switch(
-                    checked = isPcChannel,
-                    onCheckedChange = onPcChannelChange
+                OutlinedTextField(
+                    value = channelLabels[channel] ?: channel,
+                    onValueChange = {},
+                    readOnly = true,
+                    label = { Text(stringResource(R.string.channel_use)) },
+                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
+                    colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors(),
+                    modifier = Modifier.menuAnchor(MenuAnchorType.PrimaryNotEditable).fillMaxWidth()
                 )
+                ExposedDropdownMenu(
+                    expanded = expanded,
+                    onDismissRequest = { expanded = false }
+                ) {
+                    channels.forEach { selectionOption ->
+                        DropdownMenuItem(
+                            text = { Text(channelLabels[selectionOption] ?: selectionOption) },
+                            onClick = {
+                                onChannelChange(selectionOption)
+                                expanded = false
+                            },
+                            contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding
+                        )
+                    }
+                }
             }
 
             Button(
@@ -529,8 +555,8 @@ fun MainScreenPreview() {
             onUsernameChange = {},
             password = "password123",
             onPasswordChange = {},
-            isPcChannel = false,
-            onPcChannelChange = {},
+            channel = "3",
+            onChannelChange = {},
             onSaveClick = {},
             logContent = "Log line 1\nLog line 2\nLog line 3",
             logFontSize = 12f,

@@ -5,8 +5,9 @@
     {
       "username": "",
       "password": "",
-      "channel": "phone",
-      "mark": ""
+      "channel": "3",
+      "mark": "",
+      "time_windows": []
     }
   ]
 }

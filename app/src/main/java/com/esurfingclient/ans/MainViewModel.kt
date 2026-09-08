@@ -19,7 +19,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
     var username by mutableStateOf("")
     var password by mutableStateOf("")
-    var isPcChannel by mutableStateOf(false)
+    var channel by mutableStateOf("3")
     
     var logContent by mutableStateOf("")
     var logFontSize by mutableStateOf(8f)
@@ -89,10 +89,13 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
 
         val accounts = JSONArray()
         val account = JSONObject()
+        val time = JSONArray()
         account.put("username", username)
         account.put("password", password)
-        account.put("channel", if (isPcChannel) "pc" else "phone")
+        account.put("channel", channel)
         account.put("mark", "")
+        account.put("time_windows", time)
+
         accounts.put(account)
 
         config.put("accounts", accounts)
@@ -111,7 +114,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     val account = accounts.getJSONObject(0)
                     username = account.getString("username")
                     password = account.getString("password")
-                    isPcChannel = account.getString("channel") == "pc"
+                    channel = account.optString("channel", "3")
                 }
             } catch (e: Exception) {
                 e.printStackTrace()

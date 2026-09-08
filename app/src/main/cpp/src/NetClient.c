@@ -33,23 +33,96 @@ static char s_school_id[SCHOOL_ID_LENGTH];
 static char s_domain[DOMAIN_LENGTH];
 static char s_area[AREA_LENGTH];
 
+static _Thread_local char s_request_url[LOCATION_LEN];
+
+static void resolve_url(char* out, size_t out_len, const char* base, const char* ref)
+{
+    if (out == NULL || out_len == 0) return;
+    out[0] = '\0';
+    if (ref == NULL || ref[0] == '\0')
+    {
+        if (base) snprintf(out, out_len, "%s", base);
+        return;
+    }
+    if (strncmp(ref, "http://", 7) == 0 || strncmp(ref, "https://", 8) == 0)
+    {
+        snprintf(out, out_len, "%s", ref);
+        return;
+    }
+    if (base == NULL || base[0] == '\0')
+    {
+        snprintf(out, out_len, "%s", ref);
+        return;
+    }
+    if (ref[0] == '/' && ref[1] == '/')
+    {
+        const char* scheme_end = strstr(base, "://");
+        if (scheme_end) snprintf(out, out_len, "%.*s:%s", (int)(scheme_end - base), base, ref);
+        else snprintf(out, out_len + 5, "http:%s", ref);
+        return;
+    }
+
+    const char* scheme = strstr(base, "://");
+    const char* host_start = scheme ? scheme + 3 : base;
+    const char* path_start = strchr(host_start, '/');
+    if (ref[0] == '/')
+    {
+        if (path_start) snprintf(out, out_len, "%.*s%s", (int)(path_start - base), base, ref);
+        else snprintf(out, out_len, "%s%s", base, ref);
+        return;
+    }
+
+    if (path_start)
+    {
+        const char* query = strchr(path_start, '?');
+        const char* end = query ? query : path_start + strlen(path_start);
+        const char* last_slash = path_start;
+        for (const char* p = path_start; p < end; p++)
+        {
+            if (*p == '/') last_slash = p;
+        }
+        snprintf(out, out_len, "%.*s/%s", (int)(last_slash - base), base, ref);
+    }
+    else
+    {
+        snprintf(out, out_len, "%s/%s", base, ref);
+    }
+}
+
 char* extract_url_param(const char* url, const char* search_str_start)
 {
-    if (url == NULL)
+    if (url == NULL || search_str_start == NULL)
     {
         LOG_ERROR("URL 为空");
         return NULL;
     }
-    const size_t len = strlen(search_str_start);
-    char* search_pattern = malloc(len + 2);
-    if (search_pattern == NULL)
+    const size_t name_len = strlen(search_str_start);
+    char search_pattern[64];
+    if (name_len + 2 > sizeof(search_pattern))
+    {
+        LOG_ERROR("参数名过长");
+        return NULL;
+    }
+    snprintf(search_pattern, sizeof(search_pattern), "%s=", search_str_start);
+
+    const char* start = strstr(url, search_pattern);
+    if (start == NULL)
+    {
+        LOG_ERROR("未找到参数: %s", search_pattern);
+        return NULL;
+    }
+    start += name_len + 1;
+
+    /* 最后一个参数后面没有 '&', 也要能截取到结尾或 '#' */
+    const size_t value_len = strcspn(start, "&#");
+    char* result = malloc(value_len + 1);
+    if (result == NULL)
     {
         LOG_ERROR("分配内存失败");
         return NULL;
     }
-    snprintf(search_pattern, len + 2, "%s=", search_str_start);
-    char* result = extract_between_tags(url, search_pattern, "&");
-    free(search_pattern);
+    memcpy(result, start, value_len);
+    result[value_len] = '\0';
     return result;
 }
 
@@ -171,17 +244,23 @@ static size_t header_cb(const void* contents, const size_t size, const size_t nm
                 const size_t valid_len = strcspn(value, "\r\n");
 
                 size_t copy_len = valid_len;
-                if (copy_len >= LAST_LOCATION_LEN)
+                if (copy_len >= LOCATION_LEN)
                 {
-                    copy_len = LAST_LOCATION_LEN - 1;
-                    LOG_WARN("Location 被截断, 原长度: %zu, 缓冲区大小: %d", valid_len, LAST_LOCATION_LEN);
+                    copy_len = LOCATION_LEN - 1;
+                    LOG_WARN("Location 被截断, 原长度: %zu, 缓冲区大小: %d", valid_len, LOCATION_LEN);
                 }
 
-                memcpy(g_prog_status[tl_thread_idx].last_location, value, copy_len);
-                g_prog_status[tl_thread_idx].last_location[copy_len] = '\0';
+                char location[LOCATION_LEN];
+                memcpy(location, value, copy_len);
+                location[copy_len] = '\0';
+
+                char resolved[LAST_LOCATION_LEN];
+                resolve_url(resolved, sizeof(resolved), s_request_url, location);
+                snprintf(g_prog_status[tl_thread_idx].last_location, LAST_LOCATION_LEN, "%s", resolved);
 
                 LOG_VERBOSE("现在的 last_location: %s (长度: %zu)",
-                            g_prog_status[tl_thread_idx].last_location, copy_len);
+                            g_prog_status[tl_thread_idx].last_location,
+                            strlen(g_prog_status[tl_thread_idx].last_location));
             }
         }
     }
@@ -417,6 +496,7 @@ http_resp_t get(const char* url)
 
     if (tl_thread_idx > -1)
     {
+        snprintf(s_request_url, sizeof(s_request_url), "%s", safe_str(url));
         snprintf(ua, MAX_LEN, "User-Agent: %s", safe_str(g_prog_status[tl_thread_idx].login_cfg.user_agent));
         snprintf(c_id, MAX_LEN, "Client-ID: %s", safe_str(g_prog_status[tl_thread_idx].auth_cfg.client_id));
 
@@ -514,53 +594,109 @@ NetworkStatus check_network_status()
 
 static void get_school_ip_symbol()
 {
-    const char* school_ip = extract_url_param(g_prog_status[0].last_location, "wlanuserip");
-    snprintf(g_school_network_symbol, SCHOOL_NETWORK_SYMBOL, "%s", safe_str(extract_between_tags(school_ip, "", strchr(strchr(school_ip, '.') + 1, '.'))));
+    if (g_school_network_symbol[0] != '\0')
+    {
+        return;
+    }
+    if (tl_thread_idx < 0)
+    {
+        return;
+    }
+
+    /* 必须用当前线程的 last_location。配置 1 已联网时 g_prog_status[0].last_location 为空。 */
+    char* school_ip = extract_url_param(g_prog_status[tl_thread_idx].last_location, "wlanuserip");
+    if (school_ip == NULL)
+    {
+        LOG_ERROR("无法从 last_location 提取 wlanuserip");
+        return;
+    }
+
+    const char* first_dot = strchr(school_ip, '.');
+    const char* second_dot = first_dot ? strchr(first_dot + 1, '.') : NULL;
+    if (second_dot == NULL)
+    {
+        LOG_ERROR("wlanuserip 格式无效: %s", school_ip);
+        free(school_ip);
+        return;
+    }
+
+    const size_t len = (size_t)(second_dot - school_ip);
+    if (len == 0 || len >= SCHOOL_NETWORK_SYMBOL)
+    {
+        LOG_ERROR("校园网标志长度无效: %zu", len);
+        free(school_ip);
+        return;
+    }
+
+    memcpy(g_school_network_symbol, school_ip, len);
+    g_school_network_symbol[len] = '\0';
     LOG_INFO("获取到校园网标志: %s", g_school_network_symbol);
+    free(school_ip);
 }
 
 NetworkStatus get_last_location()
 {
     http_resp_t resp = {0};
-
     uint8_t retry = 1;
     do
     {
-        if (g_need_exit || !g_thread_keep_alive) return REQUEST_ERROR;
-
+        if (resp.body_data)
+        {
+            free(resp.body_data);
+            resp.body_data = NULL;
+            resp.body_size = 0;
+        }
         resp = get(s_generate_url); // 检测响应码
         if (resp.status == REQUEST_NOT_FOUND) resp.status = REQUEST_SUCCESS; // 404 代表已连接至互联网
         switch (resp.status)
         {
-        case REQUEST_REDIRECT:
-            break;
-        case REQUEST_SUCCESS:
-            retry = 1;
-            LOG_INFO("已连接至互联网");
-            sleep_ms(10000, true);
-            break;
-        default:
-            if (retry > 5)
-            {
-                LOG_FATAL("超过最多重试次数");
-                return REQUEST_ERROR;
-            }
-            LOG_WARN("非重定向, 响应码: %d, 重试: 第 %" PRIu8 " 次, 最多 5 次", resp.status, retry);
-            retry++;
-            sleep_ms(1000, true);
-            break;
+            case REQUEST_REDIRECT:
+                break;
+            case REQUEST_SUCCESS:
+                retry = 1;
+                LOG_INFO("已连接至互联网");
+                sleep_ms(10000, true);
+                break;
+            default:
+                if (retry > 5)
+                {
+                    LOG_FATAL("超过最多重试次数");
+                    if (resp.body_data) free(resp.body_data);
+                    return REQUEST_ERROR;
+                }
+                LOG_WARN("非重定向, 响应码: %d, 重试: 第 %" PRIu8 " 次, 最多 5 次", resp.status, retry);
+                retry++;
+                sleep_ms(1000, true);
+                break;
         }
-    } while (resp.status != REQUEST_REDIRECT && g_thread_keep_alive && !g_need_exit);
+    } while (resp.status != REQUEST_REDIRECT);
 
-    if (g_need_exit || !g_thread_keep_alive) return REQUEST_ERROR;
+    while (resp.status == REQUEST_REDIRECT)
+    {
+        if (resp.body_data)
+        {
+            free(resp.body_data);
+            resp.body_data = NULL;
+            resp.body_size = 0;
+        }
+        resp = get(g_prog_status[tl_thread_idx].last_location);
+    }
 
-    while (resp.status == REQUEST_REDIRECT && g_thread_keep_alive && !g_need_exit) resp = get(g_prog_status[tl_thread_idx].last_location);
+    if (resp.body_data)
+    {
+        free(resp.body_data);
+        resp.body_data = NULL;
+        resp.body_size = 0;
+    }
 
-    if (g_need_exit || !g_thread_keep_alive) return REQUEST_ERROR;
+    if (resp.status != REQUEST_HAVE_RES)
+    {
+        LOG_ERROR("跟随重定向后未获得认证页面, 状态: %d", resp.status);
+        return REQUEST_ERROR;
+    }
 
     g_prog_status[tl_thread_idx].last_location_lock = true;
     LOG_DEBUG("配置 %" PRIu8 " 获取认证配置 URL: %s", g_prog_status[tl_thread_idx].login_cfg.idx, g_prog_status[tl_thread_idx].last_location);
-
     get_school_ip_symbol(); // 获取校园网特征
     return REQUEST_REDIRECT;
 }
