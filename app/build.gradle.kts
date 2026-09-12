@@ -15,8 +15,8 @@ android {
         applicationId = "com.esurfingclient.ans"
         minSdk = 28
         targetSdk = 37
-        versionCode = 260911
-        versionName = "2.2"
+        versionCode = 260912
+        versionName = "2.3"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
@@ -56,6 +56,7 @@ android {
 }
 
 dependencies {
+    implementation(libs.androidx.compose.material3)
     implementation(libs.androidx.core.ktx)
     implementation(libs.androidx.appcompat)
     implementation(libs.material)

@@ -1,11 +1,11 @@
 <resources>
-    <string name="app_name">ESurfing Client</string>
+    <string name="app_name">Re: ESurfing Client</string>
     <string name="hint_username">Username</string>
     <string name="hint_password">Password</string>
     <string name="btn_save">Save Config</string>
     <string name="btn_start">Start Service</string>
     <string name="btn_stop">Stop Service</string>
-    <string name="btn_clear_logs">Clear Logs</string>
+    <string name="btn_clear_logs">Clear Running Logs</string>
     <string name="nav_home">Home</string>
     <string name="nav_logs">Logs</string>
     <string name="config_saved">Config saved</string>
@@ -15,4 +15,17 @@
     <string name="no_logs">No logs yet...</string>
     <string name="main_title">ESurfing Client</string>
     <string name="channel_use">Auth Channel</string>
+    <string name="battery_opt_title">Battery Optimization Settings</string>
+    <string name="history_logs">History Logs</string>
+    <string name="multi_select">Multi-Select</string>
+    <string name="delete">Delete</string>
+    <string name="select_all">Select All</string>
+    <string name="share">Share</string>
+    <string name="export">Export</string>
+    <string name="cancel">Cancel</string>
+    <string name="confirm_delete">Are you sure you want to delete the selected log files?</string>
+    <string name="delete_success">Deleted successfully</string>
+    <string name="export_success">File Saved</string>
+    <string name="log_lv">Log Level</string>
+    <string name="log_lv_4">INFO(Default)</string>
 </resources>

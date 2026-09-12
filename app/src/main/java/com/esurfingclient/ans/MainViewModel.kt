@@ -22,7 +22,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     var username by mutableStateOf("")
     var password by mutableStateOf("")
     var channel by mutableStateOf("3")
-    
+    var logLv by mutableStateOf("4")
     var logContent by mutableStateOf("")
     var logFontSize by mutableFloatStateOf(8f)
 
@@ -78,8 +78,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     } catch (e: Exception) {
                         e.printStackTrace()
                     }
-                } else {
-                    file.delete()
                 }
             }
         }
@@ -88,7 +86,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun saveConfig() {
         val config = JSONObject()
         config.put("enabled", true)
-        config.put("log_lv", 4)
+        config.put("log_lv", logLv.toInt())
 
         val accounts = JSONArray()
         val account = JSONObject()
@@ -112,6 +110,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         if (configFile.exists()) {
             try {
                 val config = JSONObject(configFile.readText())
+                logLv = config.getInt("log_lv").toString()
                 val accounts = config.getJSONArray("accounts")
                 if (accounts.length() > 0) {
                     val account = accounts.getJSONObject(0)

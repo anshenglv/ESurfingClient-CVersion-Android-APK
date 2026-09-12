@@ -2,14 +2,16 @@ package com.esurfingclient.ans
 
 import android.Manifest
 import android.annotation.SuppressLint
+import android.content.Context
 import android.content.Intent
 import android.content.pm.PackageManager
 import android.os.Build
 import android.os.Bundle
+import android.os.PowerManager
+import android.provider.Settings
 import android.widget.Toast
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
-import androidx.activity.enableEdgeToEdge
 import androidx.activity.result.contract.ActivityResultContracts
 import androidx.compose.foundation.gestures.detectDragGestures
 import androidx.compose.foundation.gestures.detectTransformGestures
@@ -18,15 +20,24 @@ import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
+import androidx.compose.foundation.text.KeyboardOptions
+import androidx.compose.foundation.text.input.TextObfuscationMode
+import androidx.compose.foundation.text.input.rememberTextFieldState
 import androidx.compose.foundation.verticalScroll
 import androidx.compose.material.icons.Icons
+import androidx.compose.material.icons.automirrored.filled.ArrowForwardIos
+import androidx.compose.material.icons.filled.ArrowOutward
+import androidx.compose.material.icons.filled.Block
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Home
 import androidx.compose.material.icons.filled.Info
-import androidx.compose.material.icons.filled.NotInterested
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Stop
+import androidx.compose.material.icons.filled.Visibility
+import androidx.compose.material.icons.filled.VisibilityOff
+import androidx.compose.material.icons.filled.Warning
 import androidx.compose.material3.*
+import androidx.compose.material3.OutlinedSecureTextField
 import androidx.compose.runtime.*
 import androidx.compose.ui.Alignment
 import androidx.compose.ui.Modifier
@@ -38,17 +49,23 @@ import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.input.pointer.pointerInput
 import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
+import androidx.compose.ui.platform.LocalInspectionMode
+import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.font.FontFamily
+import androidx.compose.ui.text.input.KeyboardType
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
 import androidx.compose.ui.unit.em
 import androidx.compose.ui.unit.sp
 import androidx.core.content.ContextCompat
+import androidx.lifecycle.Lifecycle
+import androidx.lifecycle.LifecycleEventObserver
 import androidx.lifecycle.viewmodel.compose.viewModel
 import com.esurfingclient.ans.ui.theme.ESurfingTheme
 import kotlin.math.roundToInt
+import androidx.core.net.toUri
 
 class MainActivity : ComponentActivity() {
 
@@ -62,7 +79,7 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        enableEdgeToEdge()
+        //enableEdgeToEdge()
         
         setContent {
             ESurfingTheme {
@@ -116,10 +133,15 @@ fun MainScreen(
         password = viewModel.password,
         onPasswordChange = { viewModel.password = it },
         channel = viewModel.channel,
+        logLv = viewModel.logLv,
         onChannelChange = { viewModel.channel = it },
+        onLogLvChange = { viewModel.logLv = it },
         onSaveClick = {
             viewModel.saveConfig()
             Toast.makeText(context, R.string.config_saved, Toast.LENGTH_SHORT).show()
+        },
+        onHistoryLogsClick = {
+            context.startActivity(Intent(context, LogHistoryActivity::class.java))
         },
         logContent = viewModel.logContent,
         logFontSize = viewModel.logFontSize,
@@ -148,8 +170,11 @@ fun MainScreenContent(
     password: String,
     onPasswordChange: (String) -> Unit,
     channel: String,
+    logLv: String,
+    onLogLvChange: (String) -> Unit,
     onChannelChange: (String) -> Unit,
     onSaveClick: () -> Unit,
+    onHistoryLogsClick: () -> Unit,
     logContent: String,
     logFontSize: Float,
     onClearLogsClick: () -> Unit,
@@ -209,7 +234,11 @@ fun MainScreenContent(
                             onStopClick = onStopClick,
                             onSaveClick = onSaveClick,
                             onClearLogsClick = onClearLogsClick,
-                            serviceStatus = serviceStatus
+                            onHistoryLogsClick = onHistoryLogsClick,
+                            serviceStatus = serviceStatus,
+                            isWideScreen = true,
+                            logLv = logLv,
+                            onLogLvChange = onLogLvChange
                         )
                     }
                     VerticalDivider(
@@ -250,7 +279,11 @@ fun MainScreenContent(
                             onStopClick = onStopClick,
                             onSaveClick = onSaveClick,
                             onClearLogsClick = onClearLogsClick,
-                            serviceStatus = serviceStatus
+                            onHistoryLogsClick = onHistoryLogsClick,
+                            serviceStatus = serviceStatus,
+                            isWideScreen = false,
+                            logLv = logLv,
+                            onLogLvChange = onLogLvChange
                         )
                     } else {
                         LogScreenContent(
@@ -272,6 +305,7 @@ fun MainScreenContent(
     }
 }
 
+@SuppressLint("BatteryLife")
 @OptIn(ExperimentalMaterial3Api::class)
 @Composable
 fun HomeScreenContent(
@@ -280,22 +314,67 @@ fun HomeScreenContent(
     password: String,
     onPasswordChange: (String) -> Unit,
     channel: String,
+    logLv: String,
+    onLogLvChange: (String) -> Unit,
     onChannelChange: (String) -> Unit,
     onStartClick: () -> Unit,
     onStopClick: () -> Unit,
     onSaveClick: () -> Unit,
     onClearLogsClick: () -> Unit,
-    serviceStatus: ServiceStatus
+    onHistoryLogsClick: () -> Unit,
+    serviceStatus: ServiceStatus,
+    isWideScreen: Boolean
 ) {
     var expanded by remember { mutableStateOf(false) }
+    var expanded2 by remember { mutableStateOf(false) }
     val channels = listOf("1","2","3","4", "5")
     val channelLabels = mapOf(
-        "1" to "Windows(暂未实现,使用Android通道)",
+        "1" to "Windows(暂未实现,回退至Android)",
         "2" to "Linux",
         "3" to "Android",
         "4" to "iOS",
         "5" to "MacOS"
     )
+    val logLvs = listOf("1","2","3","4","5","6")
+    val logLvLabels = mapOf(
+        "1" to "FATAL",
+        "2" to "ERROR",
+        "3" to "WARN",
+        "4" to stringResource(R.string.log_lv_4),
+        "5" to "DEBUG",
+        "6" to "VERBOSE"
+    )
+
+    val context = LocalContext.current
+    val lifecycleOwner = LocalLifecycleOwner.current
+    val isPreview = LocalInspectionMode.current
+    var isPasswordVisible by remember { mutableStateOf(false) }
+    val passwordState = rememberTextFieldState(password)
+    onPasswordChange(passwordState.text.toString())
+    
+    var isIgnoringBatteryOptimizations by remember {
+        mutableStateOf(
+            if (isPreview) false else {
+                (context.getSystemService(Context.POWER_SERVICE) as PowerManager)
+                    .isIgnoringBatteryOptimizations(context.packageName)
+            }
+        )
+    }
+
+    DisposableEffect(lifecycleOwner, isPreview) {
+        if (isPreview) return@DisposableEffect onDispose {}
+        
+        val observer = LifecycleEventObserver { _, event ->
+            if (event == Lifecycle.Event.ON_RESUME) {
+                isIgnoringBatteryOptimizations = (context.getSystemService(Context.POWER_SERVICE) as PowerManager)
+                    .isIgnoringBatteryOptimizations(context.packageName)
+            }
+        }
+        lifecycleOwner.lifecycle.addObserver(observer)
+        onDispose {
+            lifecycleOwner.lifecycle.removeObserver(observer)
+        }
+    }
 
     Column(
         modifier = Modifier
@@ -311,24 +390,62 @@ fun HomeScreenContent(
             color = MaterialTheme.colorScheme.primary,
             modifier = Modifier.padding(top = 16.dp)
         )
+        if (!isIgnoringBatteryOptimizations) {
+            Card(
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+                shape = RoundedCornerShape(24.dp),
+                onClick = {
+                    val intent = Intent(Settings.ACTION_REQUEST_IGNORE_BATTERY_OPTIMIZATIONS).apply {
+                        data = "package:${context.packageName}".toUri()
+                        addFlags(Intent.FLAG_ACTIVITY_NEW_TASK)}
+                    context.startActivity(intent)
+                },
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(16.dp),
+                    verticalAlignment = Alignment.CenterVertically,
+                ) {
+                    Icon(Icons.Filled.Warning, contentDescription = null,modifier = Modifier.size(18.dp))
+                    Text(stringResource(R.string.battery_opt_title),modifier = Modifier.padding(start = 4.dp))
+                    Spacer(modifier = Modifier.weight(1f))
+                    Icon(Icons.Filled.ArrowOutward, contentDescription = null, modifier = Modifier.size(22.dp)
+                    )
+                }
+            }
+        }
         Card(
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
             shape = RoundedCornerShape(24.dp),
-            modifier = Modifier.fillMaxWidth(),
+            //modifier = Modifier.fillMaxWidth().border(1.dp, MaterialTheme.colorScheme.outline, RoundedCornerShape(24.dp)),
             onClick = {}
         ) {
             OutlinedTextField(
                 value = username,
                 onValueChange = onUsernameChange,
                 label = { Text(stringResource(R.string.hint_username)) },
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 modifier = Modifier.fillMaxWidth().padding(top= 8.dp, start = 12.dp, end = 12.dp, bottom = 6.dp)
             )
 
-            OutlinedTextField(
-                value = password,
-                onValueChange = onPasswordChange,
+            OutlinedSecureTextField(
+                state = passwordState,
+                textObfuscationMode = if (isPasswordVisible) { TextObfuscationMode.Visible }
+                    else { TextObfuscationMode.System },
                 label = { Text(stringResource(R.string.hint_password)) },
-                modifier = Modifier.fillMaxWidth().padding(start = 12.dp, end = 12.dp, bottom = 0.dp)
+                keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
+                trailingIcon = {
+                    IconButton(onClick = { isPasswordVisible = !isPasswordVisible }) {
+                        Icon(
+                            imageVector = if (isPasswordVisible) {
+                                Icons.Filled.VisibilityOff
+                            } else {
+                                Icons.Filled.Visibility
+                            },
+                            contentDescription = null
+                        )
+                    }
+                },
+                modifier = Modifier.fillMaxWidth().padding(start = 12.dp, end = 12.dp)
             )
 
             ExposedDropdownMenuBox(
@@ -343,7 +460,7 @@ fun HomeScreenContent(
                     label = { Text(stringResource(R.string.channel_use)) },
                     trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
                     colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors(),
-                    modifier = Modifier.menuAnchor(MenuAnchorType.PrimaryNotEditable).fillMaxWidth()
+                    modifier = Modifier.menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable).fillMaxWidth()
                 )
                 ExposedDropdownMenu(
                     expanded = expanded,
@@ -362,13 +479,69 @@ fun HomeScreenContent(
                 }
             }
 
+            ExposedDropdownMenuBox(
+                expanded = expanded2,
+                onExpandedChange = { expanded2 = !expanded2 },
+                modifier = Modifier.fillMaxWidth().padding(horizontal = 12.dp)
+            ) {
+                OutlinedTextField(
+                    value = logLvLabels[logLv] ?: logLv,
+                    onValueChange = {},
+                    readOnly = true,
+                    label = { Text(stringResource(R.string.log_lv)) },
+                    trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded2) },
+                    colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors(),
+                    modifier = Modifier.menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable).fillMaxWidth()
+                )
+                ExposedDropdownMenu(
+                    expanded = expanded2,
+                    onDismissRequest = { expanded2 = false }
+                ) {
+                    logLvs.forEach { selectionOption ->
+                        DropdownMenuItem(
+                            text = { Text(logLvLabels[selectionOption] ?: selectionOption) },
+                            onClick = {
+                                onLogLvChange(selectionOption)
+                                expanded2 = false
+                            },
+                            contentPadding = ExposedDropdownMenuDefaults.ItemContentPadding
+                        )
+                    }
+                }
+            }
+
             Button(
                 onClick = onSaveClick,
-                modifier = Modifier.fillMaxWidth().padding(start = 10.dp, end = 10.dp, bottom = 8.dp)
+                modifier = Modifier.fillMaxWidth().padding(start = 10.dp, end = 10.dp, top = 10.dp, bottom = 8.dp)
             ) {
                 Text(stringResource(R.string.btn_save))
             }
         }
+
+        if(isWideScreen) {
+            Row(
+                modifier = Modifier.fillMaxWidth(),
+                horizontalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Button(
+                    onClick = onStartClick,
+                    modifier = Modifier.weight(1f),
+                    enabled = serviceStatus == ServiceStatus.STOPPED,
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+                ) {
+                    Text(stringResource(R.string.btn_start))
+                }
+                Button(
+                    onClick = onStopClick,
+                    modifier = Modifier.weight(1f),
+                    enabled = serviceStatus == ServiceStatus.RUNNING,
+                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                ) {
+                    Text(stringResource(R.string.btn_stop))
+                }
+            }
+        }
+
         OutlinedButton(
             onClick = onClearLogsClick,
             modifier = Modifier.fillMaxWidth(),
@@ -379,25 +552,23 @@ fun HomeScreenContent(
             Text(stringResource(R.string.btn_clear_logs))
         }
 
-        Row(
-            modifier = Modifier.fillMaxWidth(),
-            horizontalArrangement = Arrangement.spacedBy(8.dp)
+        Card(
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+            shape = RoundedCornerShape(24.dp),
+            onClick = onHistoryLogsClick,
+            modifier = Modifier.padding(bottom = 16.dp)
         ) {
-            Button(
-                onClick = onStartClick,
-                modifier = Modifier.weight(1f),
-                enabled = serviceStatus == ServiceStatus.STOPPED,
-                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(16.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Text(stringResource(R.string.btn_start))
-            }
-            Button(
-                onClick = onStopClick,
-                modifier = Modifier.weight(1f),
-                enabled = serviceStatus == ServiceStatus.RUNNING,
-                colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
-            ) {
-                Text(stringResource(R.string.btn_stop))
+                Text(stringResource(R.string.history_logs))
+                Icon(
+                    Icons.AutoMirrored.Filled.ArrowForwardIos,
+                    contentDescription = null,
+                    modifier = Modifier.size(18.dp),
+                )
             }
         }
     }
@@ -512,7 +683,7 @@ fun DraggableFAB(
         val icon = when (serviceStatus) {
             ServiceStatus.STOPPED -> Icons.Filled.PlayArrow
             ServiceStatus.RUNNING -> Icons.Filled.Stop
-            ServiceStatus.STOPPING -> Icons.Filled.NotInterested
+            ServiceStatus.STOPPING -> Icons.Filled.Block
         }
 
         val containerColor = when (serviceStatus) {
@@ -557,19 +728,22 @@ fun MainScreenPreview() {
             onUsernameChange = {},
             password = "password123",
             onPasswordChange = {},
-            channel = "3",
+            channel = "1",
             onChannelChange = {},
             onSaveClick = {},
             logContent = "Log line 1\nLog line 2\nLog line 3",
             logFontSize = 8f,
             onClearLogsClick = {},
             onLogFontSizeChange = {},
-            serviceStatus = ServiceStatus.STOPPING,
+            serviceStatus = ServiceStatus.RUNNING,
             fabPositionX = -1f,
             fabPositionY = -1f,
             onFabPositionSave = { _, _ -> },
             selectedItem = 0,
-            onSelectedItemSave = {}
+            onSelectedItemSave = {},
+            onHistoryLogsClick = {},
+            logLv = "4",
+            onLogLvChange = {}
         )
     }
 }

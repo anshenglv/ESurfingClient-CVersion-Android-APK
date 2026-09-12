@@ -5,7 +5,7 @@
     <string name="btn_save">保存配置</string>
     <string name="btn_start">启动服务</string>
     <string name="btn_stop">停止服务</string>
-    <string name="btn_clear_logs">清空日志</string>
+    <string name="btn_clear_logs">清空运行中的日志</string>
     <string name="nav_home">首页</string>
     <string name="nav_logs">日志</string>
     <string name="config_saved">配置已保存</string>
@@ -15,4 +15,17 @@
     <string name="no_logs">暂无日志...</string>
     <string name="main_title">天翼校园客户端</string>
     <string name="channel_use">认证通道</string>
+    <string name="battery_opt_title">电池优化设置</string>
+    <string name="history_logs">历史日志</string>
+    <string name="multi_select">多选</string>
+    <string name="delete">删除</string>
+    <string name="select_all">全选</string>
+    <string name="share">分享</string>
+    <string name="export">导出</string>
+    <string name="cancel">取消</string>
+    <string name="confirm_delete">确定删除选中的日志文件吗？</string>
+    <string name="delete_success">已删除</string>
+    <string name="export_success">文件已保存</string>
+    <string name="log_lv">日志等级</string>
+    <string name="log_lv_4">INFO(默认)</string>
 </resources>
