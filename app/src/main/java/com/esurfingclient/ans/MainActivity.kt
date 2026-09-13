@@ -154,12 +154,15 @@ fun MainScreen(
             Toast.makeText(context, R.string.logs_cleared, Toast.LENGTH_SHORT).show()
         },
         onLogFontSizeChange = { viewModel.logFontSize = it },
+        onLogFontSizeSave = { viewModel.saveLogFontSize(it) },
         serviceStatus = viewModel.serviceStatus,
         fabPositionX = viewModel.fabPositionX,
         fabPositionY = viewModel.fabPositionY,
         selectedItem = viewModel.selectedItem,
         onSelectedItemSave = { selected -> viewModel.saveSelected(selected) },
-        onFabPositionSave = { x, y -> viewModel.saveFabPosition(x, y) }
+        onFabPositionSave = { x, y -> viewModel.saveFabPosition(x, y) },
+        wifiOnly = viewModel.wifiOnly,
+        onWifiOnlyChange = { viewModel.updateWifiOnly(it) }
     )
 }
 
@@ -183,12 +186,15 @@ fun MainScreenContent(
     logFontSize: Float,
     onClearLogsClick: () -> Unit,
     onLogFontSizeChange: (Float) -> Unit,
+    onLogFontSizeSave: (Float) -> Unit,
     serviceStatus: ServiceStatus,
     fabPositionX: Float,
     fabPositionY: Float,
     selectedItem: Int,
     onSelectedItemSave: (Int) -> Unit,
-    onFabPositionSave: (Float, Float) -> Unit
+    onFabPositionSave: (Float, Float) -> Unit,
+    wifiOnly: Boolean,
+    onWifiOnlyChange: (Boolean) -> Unit
 ) {
     var selectedItem by remember { mutableIntStateOf(selectedItem) }
 
@@ -242,7 +248,12 @@ fun MainScreenContent(
                             serviceStatus = serviceStatus,
                             isWideScreen = true,
                             logLv = logLv,
-                            onLogLvChange = onLogLvChange
+                            onLogLvChange = onLogLvChange,
+                            wifiOnly = wifiOnly,
+                            onWifiOnlyChange = onWifiOnlyChange,
+                            logFontSize = logFontSize,
+                            onLogFontSizeChange = onLogFontSizeChange,
+                            onLogFontSizeSave = onLogFontSizeSave
                         )
                     }
                     VerticalDivider(
@@ -287,7 +298,12 @@ fun MainScreenContent(
                             serviceStatus = serviceStatus,
                             isWideScreen = false,
                             logLv = logLv,
-                            onLogLvChange = onLogLvChange
+                            onLogLvChange = onLogLvChange,
+                            wifiOnly = wifiOnly,
+                            onWifiOnlyChange = onWifiOnlyChange,
+                            logFontSize = logFontSize,
+                            onLogFontSizeChange = onLogFontSizeChange,
+                            onLogFontSizeSave = onLogFontSizeSave
                         )
                     } else {
                         LogScreenContent(
@@ -327,7 +343,12 @@ fun HomeScreenContent(
     onClearLogsClick: () -> Unit,
     onHistoryLogsClick: () -> Unit,
     serviceStatus: ServiceStatus,
-    isWideScreen: Boolean
+    isWideScreen: Boolean,
+    wifiOnly: Boolean,
+    onWifiOnlyChange: (Boolean) -> Unit,
+    logFontSize: Float,
+    onLogFontSizeChange: (Float) -> Unit,
+    onLogFontSizeSave: (Float) -> Unit
 ) {
     var expanded by remember { mutableStateOf(false) }
     var expanded2 by remember { mutableStateOf(false) }
@@ -555,6 +576,52 @@ fun HomeScreenContent(
             Icon(Icons.Filled.Delete, contentDescription = null, modifier = Modifier.size(18.dp))
             Spacer(Modifier.width(8.dp))
             Text(stringResource(R.string.btn_clear_logs))
+        }
+
+        Card(
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+            shape = RoundedCornerShape(24.dp),
+            modifier = Modifier.fillMaxWidth(),
+            onClick = {}
+        ) {
+            Column(
+                modifier = Modifier.padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ) {
+                Row(
+                    modifier = Modifier.fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ) {
+                    Text(text = "日志字体默认大小: ${logFontSize.toInt()}")
+                }
+                Slider(
+                    value = logFontSize,
+                    onValueChange = onLogFontSizeChange,
+                    onValueChangeFinished = { onLogFontSizeSave(logFontSize) },
+                    valueRange = 4f..20f,
+                    steps = 15
+                )
+            }
+        }
+
+        Card(
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+            shape = RoundedCornerShape(24.dp),
+            modifier = Modifier.fillMaxWidth(),
+            onClick = {onWifiOnlyChange(!wifiOnly)}
+        ) {
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 10.dp, bottom = 10.dp),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween
+            ) {
+                Text(text = "绑定认证请求至 WiFi")
+                Switch(
+                    checked = wifiOnly,
+                    onCheckedChange = onWifiOnlyChange
+                )
+            }
         }
 
         Card(
@@ -818,7 +885,10 @@ fun MainScreenPreview() {
             onSelectedItemSave = {},
             onHistoryLogsClick = {},
             logLv = "4",
-            onLogLvChange = {}
+            onLogLvChange = {},
+            wifiOnly = false,
+            onWifiOnlyChange = {},
+            onLogFontSizeSave = {}
         )
     }
 }

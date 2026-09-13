@@ -1,6 +1,7 @@
 package com.esurfingclient.ans
 
 import android.annotation.SuppressLint
+import android.content.Context
 import android.content.Intent
 import android.os.Bundle
 import android.widget.Toast
@@ -63,7 +64,8 @@ class LogViewActivity : ComponentActivity() {
 @Composable
 fun LogViewScreen(file: File, onBack: () -> Unit) {
     val context = LocalContext.current
-    var fontSize by remember { mutableFloatStateOf(8f) }
+    val prefs = remember { context.getSharedPreferences("ui_prefs", Context.MODE_PRIVATE) }
+    var fontSize by remember { mutableFloatStateOf(prefs.getFloat("log_font_size", 10f)) }
     val content = remember(file) { file.readText() }
     val scrollState = rememberScrollState()
     val isDark = isSystemInDarkTheme()

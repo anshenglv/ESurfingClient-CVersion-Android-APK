@@ -2,6 +2,10 @@ package com.esurfingclient.ans
 
 import android.app.Application
 import android.content.Context
+import android.net.ConnectivityManager
+import android.net.Network
+import android.net.NetworkCapabilities
+import android.net.NetworkRequest
 import androidx.compose.runtime.getValue
 import androidx.compose.runtime.mutableFloatStateOf
 import androidx.compose.runtime.mutableIntStateOf
@@ -24,7 +28,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     var channel by mutableStateOf("3")
     var logLv by mutableStateOf("4")
     var logContent by mutableStateOf("")
-    var logFontSize by mutableFloatStateOf(8f)
+    var logFontSize by mutableFloatStateOf(10f)
+    var wifiOnly by mutableStateOf(false)
 
     var serviceStatus by mutableStateOf(ServiceStatus.STOPPED)
 
@@ -33,12 +38,70 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     var selectedItem by mutableIntStateOf(0)
 
     private var logJob: Job? = null
+    private var networkCallback: ConnectivityManager.NetworkCallback? = null
     private val context: Context get() = getApplication()
 
     init {
         loadConfig()
-        loadFabPosition()
+        loadUIPrefs()
+        loadWifiOnly()
         startLogUpdater()
+    }
+
+    private fun loadWifiOnly() {
+        val prefs = context.getSharedPreferences("ui_prefs", Context.MODE_PRIVATE)
+        wifiOnly = prefs.getBoolean("wifi_only", false)
+        if (wifiOnly) {
+            applyWifiOnly(true)
+        }
+    }
+
+    fun updateWifiOnly(enabled: Boolean) {
+        wifiOnly = enabled
+        val prefs = context.getSharedPreferences("ui_prefs", Context.MODE_PRIVATE)
+        prefs.edit {
+            putBoolean("wifi_only", enabled)
+        }
+        applyWifiOnly(enabled)
+    }
+
+    private fun applyWifiOnly(enabled: Boolean) {
+        val connectivityManager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+        
+        networkCallback?.let {
+            connectivityManager.unregisterNetworkCallback(it)
+            networkCallback = null
+        }
+
+        if (enabled) {
+            val networkRequest = NetworkRequest.Builder()
+                .addTransportType(NetworkCapabilities.TRANSPORT_WIFI)
+                .build()
+            
+            val callback = object : ConnectivityManager.NetworkCallback() {
+                override fun onAvailable(network: Network) {
+                    super.onAvailable(network)
+                    connectivityManager.bindProcessToNetwork(network)
+                }
+
+                override fun onLost(network: Network) {
+                    super.onLost(network)
+                    connectivityManager.bindProcessToNetwork(null)
+                }
+            }
+            networkCallback = callback
+            connectivityManager.registerNetworkCallback(networkRequest, callback)
+        } else {
+            connectivityManager.bindProcessToNetwork(null)
+        }
+    }
+
+    override fun onCleared() {
+        logJob?.cancel()
+        networkCallback?.let {
+            val connectivityManager = context.getSystemService(Context.CONNECTIVITY_SERVICE) as ConnectivityManager
+            connectivityManager.unregisterNetworkCallback(it)
+        }
     }
 
     private fun startLogUpdater() {
@@ -124,11 +187,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
-    private fun loadFabPosition() {
+    private fun loadUIPrefs() {
         val prefs = context.getSharedPreferences("ui_prefs", Context.MODE_PRIVATE)
         fabPositionX = prefs.getFloat("fab_x", -1f)
         fabPositionY = prefs.getFloat("fab_y", -1f)
         selectedItem = prefs.getInt("selected_item", 0)
+        logFontSize = prefs.getFloat("log_font_size", 10f)
     }
 
     fun saveFabPosition(x: Float, y: Float) {
@@ -146,6 +210,14 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         val prefs = context.getSharedPreferences("ui_prefs", Context.MODE_PRIVATE)
         prefs.edit {
             putInt("selected_item", selected)
+        }
+    }
+
+    fun saveLogFontSize(size: Float) {
+        logFontSize = size
+        val prefs = context.getSharedPreferences("ui_prefs", Context.MODE_PRIVATE)
+        prefs.edit {
+            putFloat("log_font_size", size)
         }
     }
 }
