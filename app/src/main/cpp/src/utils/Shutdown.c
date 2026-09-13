@@ -136,9 +136,9 @@ static void signal_handler(const int sig)
 
 #endif
 
-#ifndef __ANDROID__
 void init_shutdown_hook()
 {
+#ifndef __ANDROID__
 #ifdef _WIN32
     if (SetConsoleCtrlHandler(console_handler, TRUE) == 0)
     {
@@ -167,5 +167,5 @@ void init_shutdown_hook()
         exit(1);
     }
 #endif
-    }
 #endif
+}
