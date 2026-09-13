@@ -30,9 +30,9 @@ import androidx.compose.material.icons.filled.ArrowOutward
 import androidx.compose.material.icons.filled.Block
 import androidx.compose.material.icons.filled.Delete
 import androidx.compose.material.icons.filled.Home
-import androidx.compose.material.icons.filled.Info
 import androidx.compose.material.icons.filled.PlayArrow
 import androidx.compose.material.icons.filled.Stop
+import androidx.compose.material.icons.filled.Terminal
 import androidx.compose.material.icons.filled.Visibility
 import androidx.compose.material.icons.filled.VisibilityOff
 import androidx.compose.material.icons.filled.Warning
@@ -52,8 +52,14 @@ import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.lifecycle.compose.LocalLifecycleOwner
 import androidx.compose.ui.res.stringResource
+import androidx.compose.ui.text.LinkAnnotation
+import androidx.compose.ui.text.SpanStyle
+import androidx.compose.ui.text.TextLinkStyles
+import androidx.compose.ui.text.buildAnnotatedString
 import androidx.compose.ui.text.font.FontFamily
 import androidx.compose.ui.text.input.KeyboardType
+import androidx.compose.ui.text.style.TextDecoration
+import androidx.compose.ui.text.withLink
 import androidx.compose.ui.tooling.preview.Preview
 import androidx.compose.ui.unit.IntOffset
 import androidx.compose.ui.unit.dp
@@ -79,8 +85,6 @@ class MainActivity : ComponentActivity() {
 
     override fun onCreate(savedInstanceState: Bundle?) {
         super.onCreate(savedInstanceState)
-        //enableEdgeToEdge()
-        
         setContent {
             ESurfingTheme {
                 MainScreen(
@@ -202,7 +206,7 @@ fun MainScreenContent(
                             onClick = { selectedItem = 0; onSelectedItemSave(0) }
                         )
                         NavigationBarItem(
-                            icon = { Icon(Icons.Filled.Info, contentDescription = null) },
+                            icon = { Icon(Icons.Filled.Terminal, contentDescription = null) },
                             label = { Text(stringResource(R.string.nav_logs)) },
                             selected = selectedItem == 1,
                             onClick = { selectedItem = 1; onSelectedItemSave(1) }
@@ -390,6 +394,7 @@ fun HomeScreenContent(
             color = MaterialTheme.colorScheme.primary,
             modifier = Modifier.padding(top = 16.dp)
         )
+        //(false){
         if (!isIgnoringBatteryOptimizations) {
             Card(
                 colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
@@ -424,7 +429,7 @@ fun HomeScreenContent(
                 onValueChange = onUsernameChange,
                 label = { Text(stringResource(R.string.hint_username)) },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
-                modifier = Modifier.fillMaxWidth().padding(top= 8.dp, start = 12.dp, end = 12.dp, bottom = 6.dp)
+                modifier = Modifier.fillMaxWidth().padding(top = 8.dp, start = 12.dp, end = 12.dp, bottom = 6.dp)
             )
 
             OutlinedSecureTextField(
@@ -556,7 +561,7 @@ fun HomeScreenContent(
             colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
             shape = RoundedCornerShape(24.dp),
             onClick = onHistoryLogsClick,
-            modifier = Modifier.padding(bottom = 16.dp)
+            modifier = Modifier.fillMaxWidth()
         ) {
             Row(
                 modifier = Modifier.fillMaxWidth().padding(16.dp),
@@ -569,6 +574,76 @@ fun HomeScreenContent(
                     contentDescription = null,
                     modifier = Modifier.size(18.dp),
                 )
+            }
+        }
+
+        Text(
+            text = "关于",
+            style = MaterialTheme.typography.bodyMedium,
+            color = MaterialTheme.colorScheme.primary,
+            modifier = Modifier.fillMaxWidth().padding(start = 16.dp)
+        )
+
+        Card(
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+            shape = RoundedCornerShape(24.dp),
+            modifier = Modifier.fillMaxWidth().padding(bottom = 16.dp),
+            onClick = {}
+            )
+        {
+            Column(
+                modifier = Modifier
+                    .fillMaxWidth()
+                    .padding(16.dp),
+                verticalArrangement = Arrangement.spacedBy(8.dp)
+            ){
+                Row(
+                    modifier = Modifier
+                        .fillMaxWidth(),
+                    verticalAlignment = Alignment.CenterVertically,
+                    horizontalArrangement = Arrangement.SpaceBetween
+                ){
+                    Text("当前版本",fontSize = 14.sp)
+                    val versionName = context.packageManager
+                        .getPackageInfo(context.packageName, 0)
+                        .versionName
+                    val versionCode = context.packageManager
+                        .getPackageInfo(context.packageName, 0)
+                        .longVersionCode
+                    Text(text = "$versionName ($versionCode)",fontSize = 14.sp)
+                }
+                HorizontalDivider(thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant)
+                Column(modifier = Modifier.fillMaxWidth()){
+                    Text(text = "项目地址", fontSize = 14.sp, lineHeight = 16.sp, modifier = Modifier.fillMaxWidth())
+                    Text(
+                        buildAnnotatedString {
+                            withLink(
+                                LinkAnnotation.Url(
+                                    "https://github.com/anshenglv/ESurfingClient-CVersion-Android-APK",
+                                    TextLinkStyles(style = SpanStyle(color = MaterialTheme.colorScheme.primary, textDecoration = TextDecoration.Underline)),
+                                )
+                            ) {
+                                append("https://github.com/anshenglv/ESurfingClient-CVersion-Android-APK")
+                            }
+                        },lineHeight = 13.sp, fontSize = 11.sp
+                    )
+                }
+                HorizontalDivider(thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant)
+                Column(modifier = Modifier.fillMaxWidth()){
+                    Text(text = "上游 C 版", fontSize = 14.sp, lineHeight = 16.sp, modifier = Modifier.fillMaxWidth())
+                    Text(
+                        buildAnnotatedString {
+                            withLink(
+                                LinkAnnotation.Url(
+                                    "https://github.com/BadGhost520/ESurfingClient-CVersion",
+                                    TextLinkStyles(style = SpanStyle(color = MaterialTheme.colorScheme.primary, textDecoration = TextDecoration.Underline)),
+                                )
+                            ) {
+                                append("https://github.com/BadGhost520/ESurfingClient-CVersion")
+                            }
+                        },lineHeight = 13.sp, fontSize = 11.sp
+                    )
+                }
             }
         }
     }

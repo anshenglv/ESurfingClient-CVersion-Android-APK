@@ -2,6 +2,7 @@ package com.esurfingclient.ans
 
 import android.content.Intent
 import android.os.Bundle
+import androidx.activity.compose.BackHandler
 import androidx.activity.ComponentActivity
 import androidx.activity.compose.setContent
 import androidx.compose.foundation.clickable
@@ -70,6 +71,8 @@ fun LogHistoryScreen(onBack: () -> Unit, onLogClick: (File) -> Unit) {
     LaunchedEffect(Unit) {
         loadLogs()
     }
+
+    BackHandler(enabled = isMultiSelectMode, onBack = { isMultiSelectMode = false })
 
     Scaffold(
         topBar = {

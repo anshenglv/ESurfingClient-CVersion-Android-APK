@@ -7,7 +7,7 @@
     <string name="btn_stop">Stop Service</string>
     <string name="btn_clear_logs">Clear Running Logs</string>
     <string name="nav_home">Home</string>
-    <string name="nav_logs">Logs</string>
+    <string name="nav_logs">Run</string>
     <string name="config_saved">Config saved</string>
     <string name="logs_cleared">Logs cleared</string>
     <string name="notif_title">ESurfing Client</string>
