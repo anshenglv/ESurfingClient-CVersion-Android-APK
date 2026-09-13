@@ -1,7 +1,7 @@
 #include "utils/PlatformUtils.h"
 #include "utils/Shutdown.h"
 #include "utils/Logger.h"
-#include "TimeControl.h"
+#include "utils/TimeControl.h"
 #include "States.h"
 
 #include <signal.h>
@@ -103,6 +103,8 @@ static BOOL WINAPI console_handler(const DWORD ctrlType)
 }
 
 #else
+
+#ifndef __ANDROID__
 // Linux/Unix 信号处理
 static void signal_handler(const int sig)
 {
@@ -132,9 +134,11 @@ static void signal_handler(const int sig)
 
 #endif
 
+#endif
+
+#ifndef __ANDROID__
 void init_shutdown_hook()
 {
-#ifndef __ANDROID__
 #ifdef _WIN32
     if (SetConsoleCtrlHandler(console_handler, TRUE) == 0)
     {
@@ -163,5 +167,5 @@ void init_shutdown_hook()
         exit(1);
     }
 #endif
+    }
 #endif
-}
