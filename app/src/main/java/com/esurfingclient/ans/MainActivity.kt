@@ -148,13 +148,15 @@ fun MainScreen(
             context.startActivity(Intent(context, LogHistoryActivity::class.java))
         },
         logContent = viewModel.logContent,
+        initialLogFontSize = viewModel.initialLogFontSize,
         logFontSize = viewModel.logFontSize,
+        onLogFontSizeChange = { viewModel.initialLogFontSize = it },
+        onCurrentLogSizeChange = {viewModel.logFontSize = it},
+        onLogFontSizeSave = { viewModel.saveLogFontSize(it) },
         onClearLogsClick = {
             viewModel.clearLogs()
             Toast.makeText(context, R.string.logs_cleared, Toast.LENGTH_SHORT).show()
         },
-        onLogFontSizeChange = { viewModel.logFontSize = it },
-        onLogFontSizeSave = { viewModel.saveLogFontSize(it) },
         serviceStatus = viewModel.serviceStatus,
         fabPositionX = viewModel.fabPositionX,
         fabPositionY = viewModel.fabPositionY,
@@ -183,9 +185,11 @@ fun MainScreenContent(
     onSaveClick: () -> Unit,
     onHistoryLogsClick: () -> Unit,
     logContent: String,
+    initialLogFontSize: Float,
     logFontSize: Float,
     onClearLogsClick: () -> Unit,
     onLogFontSizeChange: (Float) -> Unit,
+    onCurrentLogSizeChange: (Float) ->Unit,
     onLogFontSizeSave: (Float) -> Unit,
     serviceStatus: ServiceStatus,
     fabPositionX: Float,
@@ -251,7 +255,7 @@ fun MainScreenContent(
                             onLogLvChange = onLogLvChange,
                             wifiOnly = wifiOnly,
                             onWifiOnlyChange = onWifiOnlyChange,
-                            logFontSize = logFontSize,
+                            initialLogFontSize = initialLogFontSize,
                             onLogFontSizeChange = onLogFontSizeChange,
                             onLogFontSizeSave = onLogFontSizeSave
                         )
@@ -269,7 +273,7 @@ fun MainScreenContent(
                         LogScreenContent(
                             logContent = logContent,
                             logFontSize = logFontSize,
-                            onLogFontSizeChange = onLogFontSizeChange,
+                            onCurrentLogFontSizeChange = onCurrentLogSizeChange,
                             serviceStatus = serviceStatus,
                             onStartClick = onStartClick,
                             onStopClick = onStopClick,
@@ -301,7 +305,7 @@ fun MainScreenContent(
                             onLogLvChange = onLogLvChange,
                             wifiOnly = wifiOnly,
                             onWifiOnlyChange = onWifiOnlyChange,
-                            logFontSize = logFontSize,
+                            initialLogFontSize = initialLogFontSize,
                             onLogFontSizeChange = onLogFontSizeChange,
                             onLogFontSizeSave = onLogFontSizeSave
                         )
@@ -309,7 +313,7 @@ fun MainScreenContent(
                         LogScreenContent(
                             logContent = logContent,
                             logFontSize = logFontSize,
-                            onLogFontSizeChange = onLogFontSizeChange,
+                            onCurrentLogFontSizeChange = onCurrentLogSizeChange,
                             serviceStatus = serviceStatus,
                             onStartClick = onStartClick,
                             onStopClick = onStopClick,
@@ -346,7 +350,7 @@ fun HomeScreenContent(
     isWideScreen: Boolean,
     wifiOnly: Boolean,
     onWifiOnlyChange: (Boolean) -> Unit,
-    logFontSize: Float,
+    initialLogFontSize: Float,
     onLogFontSizeChange: (Float) -> Unit,
     onLogFontSizeSave: (Float) -> Unit
 ) {
@@ -593,12 +597,12 @@ fun HomeScreenContent(
                     verticalAlignment = Alignment.CenterVertically,
                     horizontalArrangement = Arrangement.SpaceBetween
                 ) {
-                    Text(text = "日志字体默认大小: ${logFontSize.toInt()}")
+                    Text(text = "日志字体默认大小: ${initialLogFontSize.toInt()}")
                 }
                 Slider(
-                    value = logFontSize,
+                    value = initialLogFontSize,
                     onValueChange = onLogFontSizeChange,
-                    onValueChangeFinished = { onLogFontSizeSave(logFontSize) },
+                    onValueChangeFinished = { onLogFontSizeSave(initialLogFontSize) },
                     valueRange = 4f..20f,
                     steps = 15
                 )
@@ -720,7 +724,7 @@ fun HomeScreenContent(
 fun LogScreenContent(
     logContent: String,
     logFontSize: Float,
-    onLogFontSizeChange: (Float) -> Unit,
+    onCurrentLogFontSizeChange: (Float) -> Unit,
     serviceStatus: ServiceStatus,
     onStartClick: () -> Unit,
     onStopClick: () -> Unit,
@@ -738,7 +742,7 @@ fun LogScreenContent(
     }
 
     val currentLogFontSize by rememberUpdatedState(logFontSize)
-    val currentOnLogFontSizeChange by rememberUpdatedState(onLogFontSizeChange)
+    val currentOnLogFontSizeChange by rememberUpdatedState(onCurrentLogFontSizeChange)
 
     Box(modifier = Modifier.fillMaxSize()) {
         Column(
@@ -874,9 +878,11 @@ fun MainScreenPreview() {
             onChannelChange = {},
             onSaveClick = {},
             logContent = "Log line 1\nLog line 2\nLog line 3",
-            logFontSize = 8f,
+            initialLogFontSize = 8f,
+            logFontSize = 10f,
             onClearLogsClick = {},
             onLogFontSizeChange = {},
+            onCurrentLogSizeChange = {},
             serviceStatus = ServiceStatus.RUNNING,
             fabPositionX = -1f,
             fabPositionY = -1f,

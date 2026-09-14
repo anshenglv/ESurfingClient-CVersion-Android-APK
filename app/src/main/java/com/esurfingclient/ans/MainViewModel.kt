@@ -28,6 +28,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     var channel by mutableStateOf("3")
     var logLv by mutableStateOf("4")
     var logContent by mutableStateOf("")
+    var initialLogFontSize by mutableFloatStateOf(10f)
     var logFontSize by mutableFloatStateOf(10f)
     var wifiOnly by mutableStateOf(false)
 
@@ -115,18 +116,27 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         }
     }
 
+    private var lastReadLineCount = 0
     private fun updateLogs() {
         val logFile = File(context.filesDir, "logs/run.log")
-        if (logFile.exists()) {
-            try {
-                val lines = logFile.readLines().takeLast(200)
-                val newContent = lines.joinToString("\n")
-                if (logContent != newContent) {
-                    logContent = newContent
-                }
-            } catch (e: Exception) {
+        if (!logFile.exists()) return
+
+        try {
+            val allLines = logFile.readLines()
+            if (allLines.size < lastReadLineCount) {
+                // 文件被清空/轮转，重置
+                lastReadLineCount = 0
+                logContent = ""
             }
-        }
+            if (allLines.size > lastReadLineCount) {
+                val newLines = allLines.subList(lastReadLineCount, allLines.size)
+                logContent = (logContent + "\n" + newLines.joinToString("\n")).trimStart('\n')
+                lastReadLineCount = allLines.size
+
+                val curLines = logContent.split("\n")
+                logContent = curLines.joinToString("\n")
+            }
+        } catch (e: Exception) { }
     }
 
     fun clearLogs() {
@@ -192,7 +202,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         fabPositionX = prefs.getFloat("fab_x", -1f)
         fabPositionY = prefs.getFloat("fab_y", -1f)
         selectedItem = prefs.getInt("selected_item", 0)
-        logFontSize = prefs.getFloat("log_font_size", 10f)
+        initialLogFontSize = prefs.getFloat("log_font_size", 10f)
+        logFontSize = initialLogFontSize
     }
 
     fun saveFabPosition(x: Float, y: Float) {
@@ -214,7 +225,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun saveLogFontSize(size: Float) {
-        logFontSize = size
         val prefs = context.getSharedPreferences("ui_prefs", Context.MODE_PRIVATE)
         prefs.edit {
             putFloat("log_font_size", size)
