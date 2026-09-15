@@ -156,7 +156,7 @@ fun MainScreen(
         onCurrentLogSizeChange = {viewModel.logFontSize = it},
         onLogFontSizeSave = { viewModel.saveLogFontSize(it) },
         onClearLogsClick = {
-            viewModel.clearLogs()
+            viewModel.logContent = ""
             Toast.makeText(context, R.string.logs_cleared, Toast.LENGTH_SHORT).show()
         },
         serviceStatus = viewModel.serviceStatus,

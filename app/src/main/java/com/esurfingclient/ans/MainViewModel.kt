@@ -149,25 +149,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                     val curLines = logContent.split("\n")
                     logContent = curLines.joinToString("\n")
                 }
-            } catch (e: Exception) {
-            }
-        }
-    }
-
-    fun clearLogs() {
-        val logDir = File(context.filesDir, "logs")
-        if (logDir.exists() && logDir.isDirectory) {
-            val files = logDir.listFiles()
-            files?.forEach { file ->
-                if (file.name == "run.log") {
-                    try {
-                        file.writeText("")
-                        logContent = ""
-                    } catch (e: Exception) {
-                        e.printStackTrace()
-                    }
-                }
-            }
+            } catch (e: Exception) { e.printStackTrace() }
         }
     }
 
