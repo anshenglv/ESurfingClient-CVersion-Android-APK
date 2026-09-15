@@ -1,4 +1,4 @@
-#include "utils/simssl/evp.h"
+#include "utils/sim/SimEvp.h"
 
 #include "utils/PlatformUtils.h"
 #include "utils/Logger.h"
@@ -341,33 +341,33 @@ static network_status_t curl_err_msg_out(const CURLcode curl_code)
 {
     switch (curl_code)
     {
-        case CURLE_COULDNT_RESOLVE_HOST:
-            LOG_ERROR("curl 错误码: 6, 错误原因: DNS 解析错误");
-            return STATUS_ERROR;
-        case CURLE_COULDNT_CONNECT:
-            LOG_ERROR("curl 错误码: 7, 错误原因: 连接服务器失败");
-            return STATUS_ERROR;
-        case CURLE_OPERATION_TIMEDOUT:
-            LOG_ERROR("curl 错误码: 28, 错误原因: 操作超时");
-            return STATUS_ERROR;
-        case CURLE_HTTP_RETURNED_ERROR:
-            LOG_ERROR("curl 错误码: 22, 错误原因: HTTP 状态码 ≥ 400");
-            return STATUS_ERROR;
-        case CURLE_GOT_NOTHING:
-            LOG_ERROR("curl 错误码: 52, 错误原因: 服务器返回空数据");
-            return STATUS_ERROR;
-        case CURLE_URL_MALFORMAT:
-            LOG_ERROR("curl 错误码: 3, 错误原因: URL 格式错误");
-            return STATUS_ERROR;
-        case CURLE_WRITE_ERROR:
-            LOG_ERROR("curl 错误码: 23, 错误原因: 写入数据失败");
-            return STATUS_ERROR;
-        case CURLE_ABORTED_BY_CALLBACK:
-            LOG_ERROR("curl 错误码: 42, 错误原因: 回调函数中止");
-            return STATUS_ERROR;
-        default:
-            LOG_ERROR("未知错误");
-            return STATUS_ERROR;
+    case CURLE_COULDNT_RESOLVE_HOST:
+        LOG_ERROR("curl 错误码: 6, 错误原因: DNS 解析错误");
+        return STATUS_ERROR;
+    case CURLE_COULDNT_CONNECT:
+        LOG_ERROR("curl 错误码: 7, 错误原因: 连接服务器失败");
+        return STATUS_ERROR;
+    case CURLE_OPERATION_TIMEDOUT:
+        LOG_ERROR("curl 错误码: 28, 错误原因: 操作超时");
+        return STATUS_ERROR;
+    case CURLE_HTTP_RETURNED_ERROR:
+        LOG_ERROR("curl 错误码: 22, 错误原因: HTTP 状态码 ≥ 400");
+        return STATUS_ERROR;
+    case CURLE_GOT_NOTHING:
+        LOG_ERROR("curl 错误码: 52, 错误原因: 服务器返回空数据");
+        return STATUS_ERROR;
+    case CURLE_URL_MALFORMAT:
+        LOG_ERROR("curl 错误码: 3, 错误原因: URL 格式错误");
+        return STATUS_ERROR;
+    case CURLE_WRITE_ERROR:
+        LOG_ERROR("curl 错误码: 23, 错误原因: 写入数据失败");
+        return STATUS_ERROR;
+    case CURLE_ABORTED_BY_CALLBACK:
+        LOG_ERROR("curl 错误码: 42, 错误原因: 回调函数中止");
+        return STATUS_ERROR;
+    default:
+        LOG_ERROR("未知错误");
+        return STATUS_ERROR;
     }
 }
 
@@ -556,9 +556,9 @@ curl_resp_t get(const char* url, const bool connect_only)
         curl_easy_setopt(curl, CURLOPT_WRITEFUNCTION, write_cb);
         curl_easy_setopt(curl, CURLOPT_WRITEDATA, &resp);
         curl_easy_setopt(curl, CURLOPT_MAXREDIRS, 10L);
-#ifdef __OPENWRT__
+    #ifdef __OPENWRT__
         curl_easy_setopt(curl, CURLOPT_OPENSOCKETFUNCTION, open_socket_callback);
-#endif
+    #endif
     }
 
     LOG_VERBOSE("执行 CURL");
@@ -763,26 +763,26 @@ bool get_last_location()
         }
         switch (check_network_status(false)) // 检查网络状态
         {
-            case STATUS_OK:
-                // 正常连接到互联网
-                retry = 1;
-                LOG_INFO("已连接至互联网");
-                sleep_ms(10000, true);
-                break;
-            case STATUS_NEED_AUTH:
-                // 需要认证
-                quit = true;
-                break;
-            default:
-                // 网络错误
-                if (retry > 5)
-                {
-                    LOG_FATAL("超过最多重试次数");
-                    return false;
-                }
-                LOG_WARN("网络错误, 重试: 第 %" PRIu8 " 次, 最多 5 次", retry);
-                retry++;
-                sleep_ms(1000, true);
+        case STATUS_OK:
+            // 正常连接到互联网
+            retry = 1;
+            LOG_INFO("已连接至互联网");
+            sleep_ms(10000, true);
+            break;
+        case STATUS_NEED_AUTH:
+            // 需要认证
+            quit = true;
+            break;
+        default:
+            // 网络错误
+            if (retry > 5)
+            {
+                LOG_FATAL("超过最多重试次数");
+                return false;
+            }
+            LOG_WARN("网络错误, 重试: 第 %" PRIu8 " 次, 最多 5 次", retry);
+            retry++;
+            sleep_ms(1000, true);
         }
     }
 

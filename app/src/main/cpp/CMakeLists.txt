@@ -60,11 +60,11 @@ add_library(ans SHARED
         src/cipher/CipherUtils.c
         src/cipher/KeyData.c
         src/utils/PlatformUtils.c
-        src/utils/SimThread.c
+        src/utils/sim/SimThread.c
         src/utils/Shutdown.c
         src/utils/Logger.c
         src/utils/cJSON.c
-        src/utils/simssl/evp.c
+        src/utils/sim/SimEvp.c
         src/DialerClient.c
         src/utils/TimeControl.c
         src/NetClient.c

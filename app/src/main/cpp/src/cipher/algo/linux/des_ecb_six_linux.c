@@ -1,7 +1,7 @@
 #include "cipher/CipherInterface.h"
 #include "cipher/CipherUtils.h"
 
-#include "utils/simssl/evp.h"
+#include "utils/sim/SimEvp.h"
 
 #include <stdint.h>
 #include <stdlib.h>
@@ -71,9 +71,9 @@ static void des_ecb_six_destroy(cipher_interface_t* self)
 }
 
 cipher_interface_t* create_des_ecb_six_linux_cipher(
-        const uint8_t* key0, const uint8_t* key1,
-        const uint8_t* key2, const uint8_t* key3,
-        const uint8_t* key4, const uint8_t* key5
+    const uint8_t* key0, const uint8_t* key1,
+    const uint8_t* key2, const uint8_t* key3,
+    const uint8_t* key4, const uint8_t* key5
 )
 {
     if (!key0 || !key1 || !key2 || !key3 || !key4 || !key5) return NULL;

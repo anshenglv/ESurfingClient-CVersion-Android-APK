@@ -1,6 +1,7 @@
 #include "utils/PlatformUtils.h"
 #include "utils/Logger.h"
 #include "utils/cJSON.h"
+
 #include "States.h"
 
 #include <curl/curl.h>
@@ -11,23 +12,17 @@
 #include <errno.h>
 #include <stdio.h>
 #include <time.h>
-#ifndef _WIN32
-#include <strings.h>
-#endif
 
 #ifdef _WIN32
 
 #include <sysinfoapi.h>
 #include <iphlpapi.h>
 
-#endif
+#else
 
-#define WINDOWS_UA "CCTP/WinSVR5/1068"
-#define LINUX_UA "CCTP/Linux64/1003"
-#define OLD_ANDROID_UA "CCTP/android64_vpn/2093"
-#define ANDROID_UA "CCTP/android11_64/2104"
-#define IOS_UA "CCTP/iOSdy/4023"
-#define MACOS_UA "CCTP/macdy/5019"
+#include <strings.h>
+
+#endif
 
 #ifdef __OPENWRT__
 static const char config_file[] = "/etc/config/esurfingclient";
@@ -48,6 +43,13 @@ void set_base_dir(const char* dir)
 #define DIALER_CONFIG_FILE "ESurfingClient.json"
 static char config_file[PATH_MAX + 1 + sizeof(DIALER_CONFIG_FILE)];
 #endif
+
+#define WINDOWS_UA "CCTP/WinSVR5/1068"
+#define LINUX_UA "CCTP/Linux64/1003"
+#define OLD_ANDROID_UA "CCTP/android64_vpn/2093"
+#define ANDROID_UA "CCTP/android11_64/2104"
+#define IOS_UA "CCTP/iOSdy/4023"
+#define MACOS_UA "CCTP/macdy/5019"
 
 typedef struct
 {
@@ -133,31 +135,31 @@ static void apply_channel_ua(login_cfg_t* cfg, uint8_t cfg_no)
 {
     switch (cfg->chn)
     {
-        case 1:
-            LOG_INFO("使用通道 1: Windows (暂未实现, 使用 Android 通道)");
-            snprintf(cfg->user_agent, USER_AGENT_LEN, ANDROID_UA);
-            break;
-        case 2:
-            LOG_INFO("使用通道 2: Linux");
-            snprintf(cfg->user_agent, USER_AGENT_LEN, LINUX_UA);
-            break;
-        case 3:
-            LOG_INFO("使用通道 3: Android");
-            snprintf(cfg->user_agent, USER_AGENT_LEN, ANDROID_UA);
-            break;
-        case 4:
-            LOG_INFO("使用通道 4: iOS");
-            snprintf(cfg->user_agent, USER_AGENT_LEN, IOS_UA);
-            break;
-        case 5:
-            LOG_INFO("使用通道 5: macOS");
-            snprintf(cfg->user_agent, USER_AGENT_LEN, MACOS_UA);
-            break;
-        default:
-            LOG_WARN("配置 %" PRIu8 " channel 参数错误, 使用默认通道 3 (Android)", cfg_no);
-            cfg->chn = 3;
-            snprintf(cfg->user_agent, USER_AGENT_LEN, ANDROID_UA);
-            break;
+    case 1:
+        LOG_INFO("使用通道 1: Windows (暂未实现, 使用 Android 通道)");
+        snprintf(cfg->user_agent, USER_AGENT_LEN, ANDROID_UA);
+        break;
+    case 2:
+        LOG_INFO("使用通道 2: Linux");
+        snprintf(cfg->user_agent, USER_AGENT_LEN, LINUX_UA);
+        break;
+    case 3:
+        LOG_INFO("使用通道 3: Android");
+        snprintf(cfg->user_agent, USER_AGENT_LEN, ANDROID_UA);
+        break;
+    case 4:
+        LOG_INFO("使用通道 4: iOS");
+        snprintf(cfg->user_agent, USER_AGENT_LEN, IOS_UA);
+        break;
+    case 5:
+        LOG_INFO("使用通道 5: macOS");
+        snprintf(cfg->user_agent, USER_AGENT_LEN, MACOS_UA);
+        break;
+    default:
+        LOG_WARN("配置 %" PRIu8 " channel 参数错误, 使用默认通道 3 (Android)", cfg_no);
+        cfg->chn = 3;
+        snprintf(cfg->user_agent, USER_AGENT_LEN, ANDROID_UA);
+        break;
     }
 }
 
@@ -532,7 +534,7 @@ void sleep_ms(const uint64_t ms, const bool can_stop)
         {
             if (tl_thread_idx > -1)
             {
-                if (g_prog_status[tl_thread_idx].runtime_status.is_running == false || g_prog_status[tl_thread_idx].runtime_status.is_need_reset)
+                if (g_prog_status[tl_thread_idx].runtime_status.is_running == false || g_prog_status[tl_thread_idx].runtime_status.is_need_reauth)
                 {
                     return;
                 }
@@ -589,18 +591,18 @@ void get_fmt_time(char* buf, const TimeFormat fmt)
 #endif
     switch (fmt)
     {
-        case CONSOLE_FORMAT:
-            if (strftime(buf, 32, "%Y-%m-%d %H:%M:%S", &local_tm) == 0)
-            {
-                fprintf(stderr, "ERROR: 格式化时间失败\n");
-                return;
-            }
+    case CONSOLE_FORMAT:
+        if (strftime(buf, 32, "%Y-%m-%d %H:%M:%S", &local_tm) == 0)
+        {
+            fprintf(stderr, "ERROR: 格式化时间失败\n");
             return;
-        case FILE_FORMAT:
-            if (strftime(buf, 32, "%Y%m%d-%H%M%S", &local_tm) == 0)
-            {
-                fprintf(stderr, "ERROR: 格式化时间失败\n");
-            }
+        }
+        return;
+    case FILE_FORMAT:
+        if (strftime(buf, 32, "%Y%m%d-%H%M%S", &local_tm) == 0)
+        {
+            fprintf(stderr, "ERROR: 格式化时间失败\n");
+        }
     }
 }
 
@@ -618,77 +620,77 @@ char* create_xml_payload(const XmlChoose choose)
     uint16_t xml_len = 0;
     switch (choose)
     {
-        case GET_TICKET:
-            xml_len = snprintf(xml, XML_BUFFER_SIZE,
-                               "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n"
-                               "<request>\n"
-                               "    <user-agent>%s</user-agent>\n"
-                               "    <client-id>%s</client-id>\n"
-                               "    <local-time>%s</local-time>\n"
-                               "    <host-name>%s</host-name>\n"
-                               "    <ipv4>%s</ipv4>\n"
-                               "    <ipv6></ipv6>\n"
-                               "    <mac>%s</mac>\n"
-                               "    <ostag>%s</ostag>\n"
-                               "    <gwip>%s</gwip>\n"
-                               "</request>\n",
-                               safe_str(g_prog_status[tl_thread_idx].login_cfg.user_agent),
-                               safe_str(g_prog_status[tl_thread_idx].auth_cfg.client_id),
-                               safe_str(cur_tm),
-                               safe_str(g_prog_status[tl_thread_idx].auth_cfg.host_name),
-                               safe_str(g_prog_status[tl_thread_idx].auth_cfg.client_ip),
-                               safe_str(g_prog_status[tl_thread_idx].auth_cfg.mac_addr),
-                               safe_str(g_prog_status[tl_thread_idx].auth_cfg.ostag),
-                               safe_str(g_prog_status[tl_thread_idx].auth_cfg.ac_ip)
-            );
-            break;
-        case LOGIN:
-            xml_len = snprintf(xml, XML_BUFFER_SIZE,
-                               "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n"
-                               "<request>\n"
-                               "    <user-agent>%s</user-agent>\n"
-                               "    <client-id>%s</client-id>\n"
-                               "    <ticket>%s</ticket>\n"
-                               "    <local-time>%s</local-time>\n"
-                               "    <userid>%s</userid>\n"
-                               "    <passwd>%s</passwd>\n"
-                               "</request>\n",
-                               safe_str(g_prog_status[tl_thread_idx].login_cfg.user_agent),
-                               safe_str(g_prog_status[tl_thread_idx].auth_cfg.client_id),
-                               safe_str(g_prog_status[tl_thread_idx].auth_cfg.ticket),
-                               safe_str(cur_tm),
-                               safe_str(g_prog_status[tl_thread_idx].login_cfg.usr),
-                               safe_str(g_prog_status[tl_thread_idx].login_cfg.pwd)
-            );
-            break;
-        case HEART_BEAT:
-        case TERM:
-            xml_len = snprintf(xml, XML_BUFFER_SIZE,
-                               "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n"
-                               "<request>\n"
-                               "    <user-agent>%s</user-agent>\n"
-                               "    <client-id>%s</client-id>\n"
-                               "    <local-time>%s</local-time>\n"
-                               "    <host-name>%s</host-name>\n"
-                               "    <ipv4>%s</ipv4>\n"
-                               "    <ticket>%s</ticket>\n"
-                               "    <ipv6></ipv6>\n"
-                               "    <mac>%s</mac>\n"
-                               "    <ostag>%s</ostag>\n"
-                               "</request>\n",
-                               safe_str(g_prog_status[tl_thread_idx].login_cfg.user_agent),
-                               safe_str(g_prog_status[tl_thread_idx].auth_cfg.client_id),
-                               safe_str(cur_tm),
-                               safe_str(g_prog_status[tl_thread_idx].auth_cfg.host_name),
-                               safe_str(g_prog_status[tl_thread_idx].auth_cfg.client_ip),
-                               safe_str(g_prog_status[tl_thread_idx].auth_cfg.ticket),
-                               safe_str(g_prog_status[tl_thread_idx].auth_cfg.mac_addr),
-                               safe_str(g_prog_status[tl_thread_idx].auth_cfg.ostag)
-            );
-            break;
-        default:
-            LOG_ERROR("XML 选择代码错误");
-            return NULL;
+    case GET_TICKET:
+        xml_len = snprintf(xml, XML_BUFFER_SIZE,
+            "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n"
+            "<request>\n"
+            "    <user-agent>%s</user-agent>\n"
+            "    <client-id>%s</client-id>\n"
+            "    <local-time>%s</local-time>\n"
+            "    <host-name>%s</host-name>\n"
+            "    <ipv4>%s</ipv4>\n"
+            "    <ipv6></ipv6>\n"
+            "    <mac>%s</mac>\n"
+            "    <ostag>%s</ostag>\n"
+            "    <gwip>%s</gwip>\n"
+            "</request>\n",
+            safe_str(g_prog_status[tl_thread_idx].login_cfg.user_agent),
+            safe_str(g_prog_status[tl_thread_idx].auth_cfg.client_id),
+            safe_str(cur_tm),
+            safe_str(g_prog_status[tl_thread_idx].auth_cfg.host_name),
+            safe_str(g_prog_status[tl_thread_idx].auth_cfg.client_ip),
+            safe_str(g_prog_status[tl_thread_idx].auth_cfg.mac_addr),
+            safe_str(g_prog_status[tl_thread_idx].auth_cfg.ostag),
+            safe_str(g_prog_status[tl_thread_idx].auth_cfg.ac_ip)
+        );
+        break;
+    case LOGIN:
+        xml_len = snprintf(xml, XML_BUFFER_SIZE,
+            "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n"
+            "<request>\n"
+            "    <user-agent>%s</user-agent>\n"
+            "    <client-id>%s</client-id>\n"
+            "    <ticket>%s</ticket>\n"
+            "    <local-time>%s</local-time>\n"
+            "    <userid>%s</userid>\n"
+            "    <passwd>%s</passwd>\n"
+            "</request>\n",
+            safe_str(g_prog_status[tl_thread_idx].login_cfg.user_agent),
+            safe_str(g_prog_status[tl_thread_idx].auth_cfg.client_id),
+            safe_str(g_prog_status[tl_thread_idx].auth_cfg.ticket),
+            safe_str(cur_tm),
+            safe_str(g_prog_status[tl_thread_idx].login_cfg.usr),
+            safe_str(g_prog_status[tl_thread_idx].login_cfg.pwd)
+        );
+        break;
+    case HEART_BEAT:
+    case TERM:
+        xml_len = snprintf(xml, XML_BUFFER_SIZE,
+            "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n"
+            "<request>\n"
+            "    <user-agent>%s</user-agent>\n"
+            "    <client-id>%s</client-id>\n"
+            "    <local-time>%s</local-time>\n"
+            "    <host-name>%s</host-name>\n"
+            "    <ipv4>%s</ipv4>\n"
+            "    <ticket>%s</ticket>\n"
+            "    <ipv6></ipv6>\n"
+            "    <mac>%s</mac>\n"
+            "    <ostag>%s</ostag>\n"
+            "</request>\n",
+            safe_str(g_prog_status[tl_thread_idx].login_cfg.user_agent),
+            safe_str(g_prog_status[tl_thread_idx].auth_cfg.client_id),
+            safe_str(cur_tm),
+            safe_str(g_prog_status[tl_thread_idx].auth_cfg.host_name),
+            safe_str(g_prog_status[tl_thread_idx].auth_cfg.client_ip),
+            safe_str(g_prog_status[tl_thread_idx].auth_cfg.ticket),
+            safe_str(g_prog_status[tl_thread_idx].auth_cfg.mac_addr),
+            safe_str(g_prog_status[tl_thread_idx].auth_cfg.ostag)
+        );
+        break;
+    default:
+        LOG_ERROR("XML 选择代码错误");
+        return NULL;
     }
     if (xml_len <= 0)
     {
@@ -701,7 +703,10 @@ char* create_xml_payload(const XmlChoose choose)
         return NULL;
     }
     LOG_DEBUG("创建 XML 完成");
-    LOG_VERBOSE("XML 内容为:\n%s", xml);
+    if (choose != LOGIN)
+    {
+        LOG_VERBOSE("XML 内容为:\n%s", xml);
+    }
     return xml;
 }
 
@@ -743,7 +748,9 @@ char* clean_CDATA(const char* text)
     return extract_between_tags(text, "<![CDATA[", "]]>");
 }
 
-bool save_cfg(char* configs_str)
+#ifndef __OPENWRT__
+
+bool save_cfg(const char* configs_str)
 {
     LOG_INFO("保存配置中");
     LOG_INFO("仅会保存第一个可用配置");
@@ -755,83 +762,34 @@ bool save_cfg(char* configs_str)
         return false;
     }
 
-    const cJSON* enabled = cJSON_GetObjectItem(configs, "enabled");
-    const cJSON* log_lv = cJSON_GetObjectItem(configs, "log_lv");
-
-    const cJSON* accounts = cJSON_GetObjectItem(configs, "accounts");
-    const cJSON* account = accounts ? cJSON_GetArrayItem(accounts, 0) : NULL;
-    if (account == NULL)
-    {
-        LOG_ERROR("配置中没有账号数据");
-        cJSON_Delete(configs);
-        return false;
-    }
-
-    const cJSON* username = cJSON_GetObjectItem(account, "username");
-    const cJSON* password = cJSON_GetObjectItem(account, "password");
-    const cJSON* channel = cJSON_GetObjectItem(account, "channel");
-    const cJSON* time_windows_item = cJSON_GetObjectItem(account, "time_windows");
-
-    // 保存前先校验 time_windows，避免把非法配置写盘
-    time_window_t tmp_windows[MAX_TIME_WINDOWS];
-    uint8_t tmp_window_count = 0;
-    if (parse_time_windows(time_windows_item, tmp_windows, &tmp_window_count) == false)
-    {
-        LOG_ERROR("time_windows 非法, 应为 [{ \"start\": \"mon 08:13\", \"end\": \"mon 23:57\" }, ...]");
-        cJSON_Delete(configs);
-        return false;
-    }
+    char* configs_formatted = cJSON_Print(configs);
+    cJSON_Delete(configs);
 
     FILE* cfg_file = fopen(config_file, "w");
     if (!cfg_file)
     {
         LOG_ERROR("无法生成文件: %s", config_file);
-        cJSON_Delete(configs);
+        free(configs_formatted);
         return false;
     }
-    fprintf(cfg_file, "%s", configs_str);
+    fprintf(cfg_file, "%s", configs_formatted);
     fclose(cfg_file);
 
-    if (enabled)
-    {
-        g_prog_enabled = enabled->valueint;
-    }
-    if (log_lv)
-    {
-        set_logger_level(log_lv->valueint);
-    }
-    if (username)
-    {
-        snprintf(g_prog_status[0].login_cfg.usr, USR_LEN, "%s", username->valuestring);
-    }
-    if (password)
-    {
-        snprintf(g_prog_status[0].login_cfg.pwd, PWD_LEN, "%s", password->valuestring);
-    }
-    if (channel)
-    {
-        g_prog_status[0].login_cfg.chn = channel->valueint;
-    }
-
-    // 透传 time_windows 到内存，保持桌面端与配置一致
-    g_prog_status[0].login_cfg.has_time_control = tmp_window_count > 0;
-    g_prog_status[0].login_cfg.time_window_count = tmp_window_count;
-    memcpy(g_prog_status[0].login_cfg.time_windows, tmp_windows, sizeof(time_window_t) * tmp_window_count);
-
-    g_prog_enabled = enabled->valueint;
-    set_logger_level(log_lv->valueint);
-    snprintf(g_prog_status[0].login_cfg.usr, USR_LEN, "%s", username->valuestring);
-    snprintf(g_prog_status[0].login_cfg.pwd, PWD_LEN, "%s", password->valuestring);
-    g_prog_status[0].login_cfg.chn = parse_channel_json(channel, 1);
-    apply_channel_ua(&g_prog_status[0].login_cfg, 1);
-
-    cJSON_Delete(configs);
+    free(configs_formatted);
 
     return true;
 }
 
+const char* get_config_file_path(void)
+{
+    return config_file;
+}
+
+#endif
+
 bool load_cfg()
 {
+    g_cfg_loaded = false;
 #ifndef __OPENWRT__
 
 #ifndef __ANDROID__
@@ -1170,6 +1128,8 @@ bool load_cfg()
     }
 
     g_prog_cnt = valid_cnt;
+
+    g_cfg_loaded = true;
 
     return true;
 }

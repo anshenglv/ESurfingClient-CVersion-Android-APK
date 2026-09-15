@@ -1,7 +1,7 @@
 #include "cipher/CipherInterface.h"
 #include "cipher/CipherUtils.h"
 
-#include "utils/simssl/evp.h"
+#include "utils/sim/SimEvp.h"
 
 #include <stdlib.h>
 #include <string.h>
@@ -42,7 +42,7 @@ static void stage_decrypt(uint8_t *buf, const size_t len,
   uint8_t prev[8];
   memcpy(prev, iv, 8);
   for (size_t off = 0; off < len; off += 8)
-  {
+    {
     uint8_t cblk[8], pblk[8];
     memcpy(cblk, buf + off, 8);
     simssl_des3_decrypt_block(key24, cblk, pblk);
@@ -99,7 +99,7 @@ static void desede_cbc_destroy(cipher_interface_t* self)
 }
 
 cipher_interface_t* create_desede_cbc_linux_cipher(const uint8_t* key1, const uint8_t* key2,
-                                                   const uint8_t* iv1, const uint8_t* iv2)
+                                                const uint8_t* iv1, const uint8_t* iv2)
 {
   if (!key1 || !key2 || !iv1 || !iv2) return NULL;
   cipher_interface_t* c = s_malloc(sizeof(cipher_interface_t));

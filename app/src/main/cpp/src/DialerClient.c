@@ -1,12 +1,14 @@
 #include "cipher/CipherInterface.h"
 #include "cipher/IosZsm.h"
+
 #include "utils/PlatformUtils.h"
+#include "utils/TimeControl.h"
 #include "utils/Shutdown.h"
 #include "utils/Logger.h"
+
 #include "DialerClient.h"
 #include "NetClient.h"
 #include "States.h"
-#include "utils/TimeControl.h"
 
 #include <ctype.h>
 #include <stdlib.h>
@@ -467,8 +469,8 @@ static bool init_session()
     LOG_DEBUG("会话响应长度: %zu", resp.body_size);
     {
         const bytes_t zsm = {
-                .data = (uint8_t*)resp.body_data,
-                .length = resp.body_size
+            .data = (uint8_t*)resp.body_data,
+            .length = resp.body_size
         };
 
         LOG_DEBUG("开始初始化会话");
@@ -619,13 +621,13 @@ static void clean()
     // 否则线程守护会立刻把刚下线的账号重新拉起来。
     const bool time_disabled = g_prog_status[tl_thread_idx].runtime_status.is_time_disabled;
 
-    if (g_prog_status[tl_thread_idx].runtime_status.is_initialized) // 如果已经初始化会话, 则进入
+    if (g_prog_status[tl_thread_idx].runtime_status.is_initialized == true) // 如果已经初始化会话, 则进入
     {
-        if (g_prog_status[tl_thread_idx].runtime_status.is_authed) // 如果已经认证, 则进入
+        if (g_prog_status[tl_thread_idx].runtime_status.is_authed == true) // 如果已经认证, 则进入
         {
-            LOG_DEBUG("配置 %" PRIu8 " 登出, 下标: %" PRId8,
-                      g_prog_status[tl_thread_idx].login_cfg.idx,
-                      tl_thread_idx);
+            LOG_INFO("配置 %" PRIu8 " 登出, 下标: %" PRId8,
+                g_prog_status[tl_thread_idx].login_cfg.idx,
+                tl_thread_idx);
             term(); // 登出
         }
         clean_session(); // 清理会话
@@ -651,108 +653,108 @@ static RunStatus run()
     // 到点下线后不应再发送心跳包，也不应继续认证或重试。
     if (g_prog_status[tl_thread_idx].runtime_status.is_time_disabled)
     {
-        g_prog_status[tl_thread_idx].runtime_status.is_need_reset = true;
+        g_prog_status[tl_thread_idx].runtime_status.is_need_reauth = true;
     }
-    if (g_prog_status[tl_thread_idx].runtime_status.is_need_reset)
+    if (g_prog_status[tl_thread_idx].runtime_status.is_need_reauth)
     {
         return RUN_SUCCESS;
     }
 
     switch (check_network_status(true)) // 检测网络状态
     {
-        case STATUS_OK: // 正常联网
-            retry_timeout = 1;
-            retry_auth = 1;
-            /**
-             * 检测是否初始化会话和认证登录
-             * 如果已经初始化会话和认证登录, 则进入, 否则按已连接互联网处理
-             */
-            if (g_prog_status[tl_thread_idx].runtime_status.is_initialized && g_prog_status[tl_thread_idx].runtime_status.is_authed)
+    case STATUS_OK: // 正常联网
+        retry_timeout = 1;
+        retry_auth = 1;
+        /**
+         * 检测是否初始化会话和认证登录
+         * 如果已经初始化会话和认证登录, 则进入, 否则按已连接互联网处理
+         */
+        if (g_prog_status[tl_thread_idx].runtime_status.is_initialized && g_prog_status[tl_thread_idx].runtime_status.is_authed)
+        {
+            if (g_prog_status[tl_thread_idx].auth_cfg.keep_retry != 0) // 检测重试时间是否为零
             {
-                if (g_prog_status[tl_thread_idx].auth_cfg.keep_retry != 0) // 检测重试时间是否为零
+                /**
+                 * 检测经过的时间是否达到重试时间
+                 * 达到就发送心跳包
+                 */
+                if (get_cur_tm_ms() - g_prog_status[tl_thread_idx].auth_cfg.tick >= g_prog_status[tl_thread_idx].auth_cfg.keep_retry * 1000)
                 {
-                    /**
-                     * 检测经过的时间是否达到重试时间
-                     * 达到就发送心跳包
-                     */
-                    if (get_cur_tm_ms() - g_prog_status[tl_thread_idx].auth_cfg.tick >= g_prog_status[tl_thread_idx].auth_cfg.keep_retry * 1000)
+                    LOG_INFO("发送心跳包");
+                    uint8_t retry_heartbeat = 1;
+                    while (heartbeat() == false)
                     {
-                        LOG_INFO("发送心跳包");
-                        uint8_t retry_heartbeat = 1;
-                        while (heartbeat() == false)
+                        if (retry_heartbeat > 5)
                         {
-                            if (retry_heartbeat > 5)
-                            {
-                                LOG_FATAL("超过最多重试次数");
-                                return RUN_FAILED;
-                            }
-                            LOG_ERROR("配置 %" PRIu8 " 心跳包发送失败, 下标 %" PRIu8 ", 重试: 第 %" PRIu8 " 次, 最多 5 次",
-                                      g_prog_status[tl_thread_idx].login_cfg.idx,
-                                      tl_thread_idx,
-                                      retry_heartbeat);
-                            retry_heartbeat++;
-                            sleep_ms(1000, true);
+                            LOG_FATAL("超过最多重试次数");
+                            return RUN_FAILED;
                         }
-                        LOG_INFO("下一次重试: %" PRIu64 " 秒后",
-                                 g_prog_status[tl_thread_idx].auth_cfg.keep_retry);
-                        g_prog_status[tl_thread_idx].auth_cfg.tick = get_cur_tm_ms(); // 重新给 tick 赋值
+                        LOG_ERROR("配置 %" PRIu8 " 心跳包发送失败, 下标 %" PRIu8 ", 重试: 第 %" PRIu8 " 次, 最多 5 次",
+                            g_prog_status[tl_thread_idx].login_cfg.idx,
+                            tl_thread_idx,
+                            retry_heartbeat);
+                        retry_heartbeat++;
+                        sleep_ms(1000, true);
                     }
+                    LOG_INFO("下一次重试: %" PRIu64 " 秒后",
+                        g_prog_status[tl_thread_idx].auth_cfg.keep_retry);
+                    g_prog_status[tl_thread_idx].auth_cfg.tick = get_cur_tm_ms(); // 重新给 tick 赋值
                 }
             }
-            else
+        }
+        else
+        {
+            LOG_INFO("已连接至互联网");
+        }
+        sleep_ms(1000, false);
+        return RUN_SUCCESS;
+    case STATUS_NEED_AUTH: // 需要认证
+        retry_timeout = 1;
+        LOG_INFO("需要认证");
+        if (g_prog_status[tl_thread_idx].runtime_status.is_initialized) // 进入认证流程的时候如果会话已经初始化, 重置认证配置参数
+        {
+            reset();
+            g_prog_status[tl_thread_idx].runtime_status.is_running = true;
+        }
+        if (auth() != AUTH_SUCCESS)
+        {
+            if (g_prog_status[tl_thread_idx].runtime_status.is_running == false)
             {
-                LOG_INFO("已连接至互联网");
-            }
-            sleep_ms(1000, false);
-            return RUN_SUCCESS;
-        case STATUS_NEED_AUTH: // 需要认证
-            retry_timeout = 1;
-            LOG_INFO("需要认证");
-            if (g_prog_status[tl_thread_idx].runtime_status.is_initialized) // 进入认证流程的时候如果会话已经初始化, 重置认证配置参数
-            {
-                reset();
-                g_prog_status[tl_thread_idx].runtime_status.is_running = true;
-            }
-            if (auth() != AUTH_SUCCESS)
-            {
-                if (g_prog_status[tl_thread_idx].runtime_status.is_running == false)
-                {
-                    return RUN_FAILED;
-                }
-                if (retry_auth > 5)
-                {
-                    LOG_FATAL("超过最多重试次数, 请检查账号密码是否正确");
-                    return RUN_FAILED;
-                }
-                retry_auth_time = 60000 * table[retry_auth - 1];
-                LOG_ERROR("配置 %" PRIu8 " 认证失败, 下标 %" PRIu8 ", 重试: 第 %" PRIu8 " 次, 最多 5 次, 下一次重试时间: %" PRIu64 " 毫秒 (% " PRIu64 " 秒) 后",
-                          g_prog_status[tl_thread_idx].login_cfg.idx,
-                          tl_thread_idx,
-                          retry_auth,
-                          retry_auth_time,
-                          retry_auth_time / 1000);
-                retry_auth++;
-                sleep_ms(retry_auth_time, true);
-            }
-            return RUN_SUCCESS;
-        case STATUS_ERROR: // 网络错误
-            retry_auth = 1;
-            if (retry_timeout > 5)
-            {
-                LOG_ERROR("超过最多重试次数");
                 return RUN_FAILED;
             }
-            LOG_WARN("网络错误, 等待 10 秒后重试, 重试: 第 %" PRIu8 " 次, 最多 5 次",
-                     retry_timeout);
-            sleep_ms(10000, true);
-            retry_timeout++;
-            return TIMEOUT_RETRY;
-        default:
-            retry_timeout = 1;
-            retry_auth = 1;
-            LOG_ERROR("网络错误");
-            sleep_ms(5000, true);
+            if (retry_auth > 5)
+            {
+                LOG_FATAL("超过最多重试次数, 请检查账号密码是否正确");
+                return RUN_FAILED;
+            }
+            retry_auth_time = 60000 * table[retry_auth - 1];
+            LOG_ERROR("配置 %" PRIu8 " 认证失败, 下标 %" PRIu8 ", 重试: 第 %" PRIu8 " 次, 最多 5 次, 下一次重试时间: %" PRIu64 " 毫秒 (% " PRIu64 " 秒) 后",
+                g_prog_status[tl_thread_idx].login_cfg.idx,
+                tl_thread_idx,
+                retry_auth,
+                retry_auth_time,
+                retry_auth_time / 1000);
+            retry_auth++;
+            sleep_ms(retry_auth_time, true);
+        }
+        return RUN_SUCCESS;
+    case STATUS_ERROR: // 网络错误
+        retry_auth = 1;
+        if (retry_timeout > 5)
+        {
+            LOG_ERROR("超过最多重试次数");
             return RUN_FAILED;
+        }
+        LOG_WARN("网络错误, 等待 10 秒后重试, 重试: 第 %" PRIu8 " 次, 最多 5 次",
+            retry_timeout);
+        sleep_ms(10000, true);
+        retry_timeout++;
+        return TIMEOUT_RETRY;
+    default:
+        retry_timeout = 1;
+        retry_auth = 1;
+        LOG_ERROR("网络错误");
+        sleep_ms(5000, true);
+        return RUN_FAILED;
     }
 }
 
@@ -762,9 +764,9 @@ int dialer_app(void* arg)
     g_prog_status[tl_thread_idx].runtime_status.is_running = true;
     g_prog_status[tl_thread_idx].thread_id = sim_thread_cur_id(); // 获取当前线程 TID
     LOG_DEBUG("认证线程 %" PRId8 " 创建成功, ID: %" PRIu64 ", 使用配置: %" PRIu8,
-              tl_thread_idx,
-              g_prog_status[tl_thread_idx].thread_id,
-              g_prog_status[tl_thread_idx].login_cfg.idx);
+        tl_thread_idx,
+        g_prog_status[tl_thread_idx].thread_id,
+        g_prog_status[tl_thread_idx].login_cfg.idx);
 
     refresh_states(); // 刷新数据 (algo_id, host_name, client_id, mac_addr)
     if (get_last_location() == false) g_prog_status[tl_thread_idx].runtime_status.is_running = false;  // 获取 last_location, 用于获取认证配置
@@ -778,16 +780,16 @@ int dialer_app(void* arg)
     while (g_prog_status[tl_thread_idx].runtime_status.is_running)
     {
         const RunStatus run_status = run();
-        if (run_status == RUN_FAILED || g_prog_status[tl_thread_idx].runtime_status.is_need_reset) // 如果 run 函数返回 RUN_FAILED 或需要重置, 则退出循环
+        // 如果 run 函数返回 RUN_FAILED 或需要重置, 则退出循环
+        if (run_status == RUN_FAILED)
         {
-            if (run_status == RUN_FAILED)
-            {
-                LOG_ERROR("线程出现错误, 正在退出");
-            }
-            else if (g_prog_status[tl_thread_idx].runtime_status.is_need_reset)
-            {
-                LOG_INFO("线程需要重置, 正在退出");
-            }
+            LOG_ERROR("线程出现错误, 正在退出");
+            g_prog_status[tl_thread_idx].runtime_status.is_running = false;
+            break;
+        }
+        if (g_prog_status[tl_thread_idx].runtime_status.is_need_reauth)
+        {
+            LOG_INFO("线程需要重置, 正在退出");
             g_prog_status[tl_thread_idx].runtime_status.is_running = false;
             break;
         }
@@ -811,7 +813,7 @@ void work()
     if (init_logger() == false) return; // 初始化日志系统
 
     LOG_INFO("-------------------------------------------------------------------");
-    LOG_INFO(" - 程序版本: 2.0.8-r1" );
+    LOG_INFO(" - 程序版本: 2.0.9-r1" );
     LOG_INFO(" - 本程序由 BadGhost (鬼鬼) 制作, 由 anshenglv 移植，遵循 Apache-2.0 协议");
     LOG_INFO(" - 制作不易, 赞助鬼鬼, 让鬼鬼更好地去维护更新这个项目罢~");
     LOG_INFO(" - 如果此应用帮到你了，也给 anshenglv 点个 star 吧！");
@@ -841,26 +843,26 @@ void work()
         }
         switch (check_network_status(true)) // 检查网络状态
         {
-            case STATUS_OK:
-                // 正常连接到互联网
-                retry_network = 1;
-                LOG_INFO("已连接至互联网");
-                sleep_ms(10000, true);
-                break;
-            case STATUS_NEED_AUTH:
-                // 需要认证
-                quit = true;
-                break;
-            default:
-                // 网络错误
-                if (retry_network > 5)
-                {
-                    LOG_FATAL("超过最多重试次数");
-                    shut(1);
-                }
-                LOG_WARN("网络错误, 重试: 第 %" PRIu8 " 次, 最多 5 次", retry_network);
-                retry_network++;
-                sleep_ms(1000, true);
+        case STATUS_OK:
+            // 正常连接到互联网
+            retry_network = 1;
+            LOG_INFO("已连接至互联网");
+            sleep_ms(10000, true);
+            break;
+        case STATUS_NEED_AUTH:
+            // 需要认证
+            quit = true;
+            break;
+        default:
+            // 网络错误
+            if (retry_network > 5)
+            {
+                LOG_FATAL("超过最多重试次数");
+                shut(1);
+            }
+            LOG_WARN("网络错误, 重试: 第 %" PRIu8 " 次, 最多 5 次", retry_network);
+            retry_network++;
+            sleep_ms(1000, true);
         }
     }
 
@@ -915,7 +917,7 @@ void work()
                 LOG_WARN("认证时间超过 172200000 毫秒 (1 天 23 时 50 分), 为避免被远程服务器踢下线, 正在重新进行认证");
                 for (uint8_t j = 0; j < g_prog_cnt; j++)
                 {
-                    g_prog_status[j].runtime_status.is_need_reset = true;
+                    g_prog_status[j].runtime_status.is_need_reauth = true;
                     uint8_t retry_wte = 1;
                     while (g_prog_status[j].runtime_status.is_authed)
                     {
@@ -951,6 +953,19 @@ void work()
                 }
 
                 LOG_INFO("由于线程守护已开启，将会重新启动认证线程 %" PRIu8, i);
+                if (g_cfg_loaded == false)
+                {
+                    LOG_WARN("配置文件未完成加载, 令所有线程退出并加载");
+                    for (uint8_t j = 0; j < g_prog_cnt; j++)
+                    {
+                        g_prog_status[j].runtime_status.is_running = true;
+                        while (g_prog_status[j].runtime_status.is_authed == true)
+                        {
+                            sleep_ms(100, true);
+                        }
+                    }
+                    load_cfg();
+                }
                 g_prog_status[i].thread = sim_thread_create(dialer_app, (void*)(intptr_t)i);
                 uint8_t retry_ct = 1;
                 while (g_prog_status[i].thread == NULL)
