@@ -20,6 +20,7 @@ import kotlinx.coroutines.launch
 import org.json.JSONArray
 import org.json.JSONObject
 import java.io.File
+import kotlin.time.Duration.Companion.milliseconds
 
 class MainViewModel(application: Application) : AndroidViewModel(application) {
 
@@ -33,7 +34,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     var wifiOnly by mutableStateOf(false)
 
     var serviceStatus by mutableStateOf(ServiceStatus.STOPPED)
-
+    var autoScroll by mutableStateOf(true)
     var fabPositionX by mutableFloatStateOf(-1f)
     var fabPositionY by mutableFloatStateOf(-1f)
     var selectedItem by mutableIntStateOf(0)
@@ -108,10 +109,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private fun startLogUpdater() {
         logJob?.cancel()
         logJob = viewModelScope.launch {
+            var isRunning by mutableStateOf(true)
             while (true) {
-                updateLogs()
+                if (isRunning){updateLogs()}
                 serviceStatus = ESurfingService.getServiceStatus()
-                delay(500)
+                isRunning = serviceStatus != ServiceStatus.STOPPED
+                delay(250.milliseconds)
             }
         }
     }
@@ -119,24 +122,36 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private var lastReadLineCount = 0
     private fun updateLogs() {
         val logFile = File(context.filesDir, "logs/run.log")
-        if (!logFile.exists()) return
 
-        try {
-            val allLines = logFile.readLines()
-            if (allLines.size < lastReadLineCount) {
-                // 文件被清空/轮转，重置
-                lastReadLineCount = 0
-                logContent = ""
-            }
-            if (allLines.size > lastReadLineCount) {
-                val newLines = allLines.subList(lastReadLineCount, allLines.size)
-                logContent = (logContent + "\n" + newLines.joinToString("\n")).trimStart('\n')
-                lastReadLineCount = allLines.size
+        if (!logFile.exists()) {
+            var logs by mutableStateOf(emptyList<File>())
+            val logDir = File(context.filesDir, "logs")
 
-                val curLines = logContent.split("\n")
-                logContent = curLines.joinToString("\n")
+            if (logDir.exists() && logDir.isDirectory) {
+                logs = logDir.listFiles { _, name -> name.endsWith(".log") }
+                    ?.sortedByDescending { it.name } ?: emptyList()
+                logContent = if (!logs.isEmpty()) { logs[0].readText() } else { "" }
+                lastReadLineCount = 10001
             }
-        } catch (e: Exception) { }
+        } else {
+            try {
+                val allLines = logFile.readLines()
+                if (allLines.size < lastReadLineCount) {
+                    // 文件被清空/轮转，重置
+                    lastReadLineCount = 0
+                    logContent = ""
+                }
+                if (allLines.size > lastReadLineCount) {
+                    val newLines = allLines.subList(lastReadLineCount, allLines.size)
+                    logContent = (logContent + "\n" + newLines.joinToString("\n")).trimStart('\n')
+                    lastReadLineCount = allLines.size
+
+                    val curLines = logContent.split("\n")
+                    logContent = curLines.joinToString("\n")
+                }
+            } catch (e: Exception) {
+            }
+        }
     }
 
     fun clearLogs() {
@@ -203,6 +218,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         fabPositionY = prefs.getFloat("fab_y", -1f)
         selectedItem = prefs.getInt("selected_item", 0)
         initialLogFontSize = prefs.getFloat("log_font_size", 10f)
+        autoScroll = prefs.getBoolean("ifAutoScroll", true)
         logFontSize = initialLogFontSize
     }
 
@@ -225,9 +241,18 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     }
 
     fun saveLogFontSize(size: Float) {
+        logFontSize = initialLogFontSize
         val prefs = context.getSharedPreferences("ui_prefs", Context.MODE_PRIVATE)
         prefs.edit {
             putFloat("log_font_size", size)
+        }
+    }
+
+    fun saveAutoScroll(ifAutoScroll: Boolean) {
+        autoScroll = ifAutoScroll
+        val prefs = context.getSharedPreferences("ui_prefs", Context.MODE_PRIVATE)
+        prefs.edit {
+            putBoolean("ifAutoScroll", ifAutoScroll)
         }
     }
 }

@@ -18,6 +18,8 @@ import androidx.compose.foundation.gestures.detectTransformGestures
 import androidx.compose.foundation.isSystemInDarkTheme
 import androidx.compose.foundation.layout.*
 import androidx.compose.foundation.rememberScrollState
+import androidx.compose.foundation.ScrollState
+import androidx.compose.foundation.selection.toggleable
 import androidx.compose.foundation.shape.CircleShape
 import androidx.compose.foundation.shape.RoundedCornerShape
 import androidx.compose.foundation.text.KeyboardOptions
@@ -164,7 +166,9 @@ fun MainScreen(
         onSelectedItemSave = { selected -> viewModel.saveSelected(selected) },
         onFabPositionSave = { x, y -> viewModel.saveFabPosition(x, y) },
         wifiOnly = viewModel.wifiOnly,
-        onWifiOnlyChange = { viewModel.updateWifiOnly(it) }
+        onWifiOnlyChange = { viewModel.updateWifiOnly(it) },
+        autoScroll = viewModel.autoScroll,
+        onAutoScrollChange = { viewModel.saveAutoScroll(it)}
     )
 }
 
@@ -198,9 +202,18 @@ fun MainScreenContent(
     onSelectedItemSave: (Int) -> Unit,
     onFabPositionSave: (Float, Float) -> Unit,
     wifiOnly: Boolean,
-    onWifiOnlyChange: (Boolean) -> Unit
+    onWifiOnlyChange: (Boolean) -> Unit,
+    autoScroll: Boolean,
+    onAutoScrollChange: (Boolean) -> Unit
 ) {
     var selectedItem by remember { mutableIntStateOf(selectedItem) }
+    val logScrollState = rememberScrollState(0)
+
+    if(autoScroll) {
+        LaunchedEffect(logContent) {
+            logScrollState.animateScrollTo(logScrollState.maxValue)
+        }
+    }
 
     BoxWithConstraints(modifier = Modifier.fillMaxSize()) {
         val isWideScreen = maxWidth > 800.dp
@@ -257,7 +270,9 @@ fun MainScreenContent(
                             onWifiOnlyChange = onWifiOnlyChange,
                             initialLogFontSize = initialLogFontSize,
                             onLogFontSizeChange = onLogFontSizeChange,
-                            onLogFontSizeSave = onLogFontSizeSave
+                            onLogFontSizeSave = onLogFontSizeSave,
+                            autoScroll = autoScroll,
+                            onAutoScrollChange = onAutoScrollChange
                         )
                     }
                     VerticalDivider(
@@ -273,6 +288,7 @@ fun MainScreenContent(
                         LogScreenContent(
                             logContent = logContent,
                             logFontSize = logFontSize,
+                            scrollState = logScrollState,
                             onCurrentLogFontSizeChange = onCurrentLogSizeChange,
                             serviceStatus = serviceStatus,
                             onStartClick = onStartClick,
@@ -307,12 +323,15 @@ fun MainScreenContent(
                             onWifiOnlyChange = onWifiOnlyChange,
                             initialLogFontSize = initialLogFontSize,
                             onLogFontSizeChange = onLogFontSizeChange,
-                            onLogFontSizeSave = onLogFontSizeSave
+                            onLogFontSizeSave = onLogFontSizeSave,
+                            autoScroll = autoScroll,
+                            onAutoScrollChange = onAutoScrollChange
                         )
                     } else {
                         LogScreenContent(
                             logContent = logContent,
                             logFontSize = logFontSize,
+                            scrollState = logScrollState,
                             onCurrentLogFontSizeChange = onCurrentLogSizeChange,
                             serviceStatus = serviceStatus,
                             onStartClick = onStartClick,
@@ -352,7 +371,9 @@ fun HomeScreenContent(
     onWifiOnlyChange: (Boolean) -> Unit,
     initialLogFontSize: Float,
     onLogFontSizeChange: (Float) -> Unit,
-    onLogFontSizeSave: (Float) -> Unit
+    onLogFontSizeSave: (Float) -> Unit,
+    autoScroll: Boolean,
+    onAutoScrollChange: (Boolean) -> Unit
 ) {
     var expanded by remember { mutableStateOf(false) }
     var expanded2 by remember { mutableStateOf(false) }
@@ -548,38 +569,56 @@ fun HomeScreenContent(
             }
         }
 
-        if(isWideScreen) {
-            Row(
-                modifier = Modifier.fillMaxWidth(),
-                horizontalArrangement = Arrangement.spacedBy(8.dp)
-            ) {
-                Button(
-                    onClick = onStartClick,
-                    modifier = Modifier.weight(1f),
-                    enabled = serviceStatus == ServiceStatus.STOPPED,
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+        Card(
+            colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+            shape = RoundedCornerShape(24.dp),
+            modifier = Modifier.fillMaxWidth(),
+            onClick = {}
+        ){
+            if(isWideScreen) {
+                Row(
+                    modifier = Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 10.dp),
+                    horizontalArrangement = Arrangement.spacedBy(8.dp)
                 ) {
-                    Text(stringResource(R.string.btn_start))
-                }
-                Button(
-                    onClick = onStopClick,
-                    modifier = Modifier.weight(1f),
-                    enabled = serviceStatus == ServiceStatus.RUNNING,
-                    colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
-                ) {
-                    Text(stringResource(R.string.btn_stop))
+                    Button(
+                        onClick = onStartClick,
+                        modifier = Modifier.weight(1f),
+                        enabled = serviceStatus == ServiceStatus.STOPPED,
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
+                    ) {
+                        Text(stringResource(R.string.btn_start))
+                    }
+                    Button(
+                        onClick = onStopClick,
+                        modifier = Modifier.weight(1f),
+                        enabled = serviceStatus == ServiceStatus.RUNNING,
+                        colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
+                    ) {
+                        Text(stringResource(R.string.btn_stop))
+                    }
                 }
             }
-        }
-
-        OutlinedButton(
-            onClick = onClearLogsClick,
-            modifier = Modifier.fillMaxWidth(),
-            colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error)
-        ) {
-            Icon(Icons.Filled.Delete, contentDescription = null, modifier = Modifier.size(18.dp))
-            Spacer(Modifier.width(8.dp))
-            Text(stringResource(R.string.btn_clear_logs))
+            Row(
+                modifier = Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, top = 10.dp, bottom = 10.dp)
+                    .toggleable(value = autoScroll, onValueChange = onAutoScrollChange),
+                verticalAlignment = Alignment.CenterVertically,
+                horizontalArrangement = Arrangement.SpaceBetween,
+            ) {
+                Text(text = "运行页日志自动置底")
+                Switch(
+                    checked = autoScroll,
+                    onCheckedChange = onAutoScrollChange
+                )
+            }
+            OutlinedButton(
+                onClick = onClearLogsClick,
+                modifier = Modifier.fillMaxWidth().padding(start = 16.dp, end = 16.dp, bottom = 10.dp),
+                colors = ButtonDefaults.outlinedButtonColors(contentColor = MaterialTheme.colorScheme.error)
+            ) {
+                Icon(Icons.Filled.Delete, contentDescription = null, modifier = Modifier.size(18.dp))
+                Spacer(Modifier.width(8.dp))
+                Text(stringResource(R.string.btn_clear_logs))
+            }
         }
 
         Card(
@@ -681,7 +720,7 @@ fun HomeScreenContent(
                     val versionCode = context.packageManager
                         .getPackageInfo(context.packageName, 0)
                         .longVersionCode
-                    Text(text = "$versionName ($versionCode)",fontSize = 14.sp)
+                    Text(text = "$versionName ($versionCode) | 2.0.8-r1",fontSize = 14.sp)
                 }
                 HorizontalDivider(thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant)
                 Column(modifier = Modifier.fillMaxWidth()){
@@ -724,6 +763,7 @@ fun HomeScreenContent(
 fun LogScreenContent(
     logContent: String,
     logFontSize: Float,
+    scrollState: ScrollState,
     onCurrentLogFontSizeChange: (Float) -> Unit,
     serviceStatus: ServiceStatus,
     onStartClick: () -> Unit,
@@ -733,14 +773,7 @@ fun LogScreenContent(
     onFabPositionSave: (Float, Float) -> Unit,
     isWideScreen: Boolean
 ) {
-    val scrollState = rememberScrollState()
     val isDark = isSystemInDarkTheme()
-    
-    // Auto-scroll to bottom when logs change
-    LaunchedEffect(logContent) {
-        scrollState.animateScrollTo(scrollState.maxValue)
-    }
-
     val currentLogFontSize by rememberUpdatedState(logFontSize)
     val currentOnLogFontSizeChange by rememberUpdatedState(onCurrentLogFontSizeChange)
 
@@ -755,7 +788,7 @@ fun LogScreenContent(
                         val contentHeight = scrollState.maxValue + viewHeight
                         val thumbHeight = (viewHeight / contentHeight) * viewHeight
                         val thumbOffset = (scrollState.value.toFloat() / contentHeight) * viewHeight
-                        
+
                         drawRoundRect(
                             color = (if (isDark) Color.White else Color.Black).copy(alpha = 0.3f),
                             topLeft = Offset(size.width - 6.dp.toPx(), thumbOffset),
@@ -894,7 +927,9 @@ fun MainScreenPreview() {
             onLogLvChange = {},
             wifiOnly = false,
             onWifiOnlyChange = {},
-            onLogFontSizeSave = {}
+            onLogFontSizeSave = {},
+            autoScroll = true,
+            onAutoScrollChange = {}
         )
     }
 }
