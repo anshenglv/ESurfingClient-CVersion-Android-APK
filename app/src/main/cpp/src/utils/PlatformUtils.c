@@ -135,31 +135,31 @@ static void apply_channel_ua(login_cfg_t* cfg, uint8_t cfg_no)
 {
     switch (cfg->chn)
     {
-    case 1:
-        LOG_INFO("使用通道 1: Windows (暂未实现, 使用 Android 通道)");
-        snprintf(cfg->user_agent, USER_AGENT_LEN, ANDROID_UA);
-        break;
-    case 2:
-        LOG_INFO("使用通道 2: Linux");
-        snprintf(cfg->user_agent, USER_AGENT_LEN, LINUX_UA);
-        break;
-    case 3:
-        LOG_INFO("使用通道 3: Android");
-        snprintf(cfg->user_agent, USER_AGENT_LEN, ANDROID_UA);
-        break;
-    case 4:
-        LOG_INFO("使用通道 4: iOS");
-        snprintf(cfg->user_agent, USER_AGENT_LEN, IOS_UA);
-        break;
-    case 5:
-        LOG_INFO("使用通道 5: macOS");
-        snprintf(cfg->user_agent, USER_AGENT_LEN, MACOS_UA);
-        break;
-    default:
-        LOG_WARN("配置 %" PRIu8 " channel 参数错误, 使用默认通道 3 (Android)", cfg_no);
-        cfg->chn = 3;
-        snprintf(cfg->user_agent, USER_AGENT_LEN, ANDROID_UA);
-        break;
+        case 1:
+            LOG_INFO("使用通道 1: Windows (暂未实现, 使用 Android 通道)");
+            snprintf(cfg->user_agent, USER_AGENT_LEN, ANDROID_UA);
+            break;
+        case 2:
+            LOG_INFO("使用通道 2: Linux");
+            snprintf(cfg->user_agent, USER_AGENT_LEN, LINUX_UA);
+            break;
+        case 3:
+            LOG_INFO("使用通道 3: Android");
+            snprintf(cfg->user_agent, USER_AGENT_LEN, ANDROID_UA);
+            break;
+        case 4:
+            LOG_INFO("使用通道 4: iOS");
+            snprintf(cfg->user_agent, USER_AGENT_LEN, IOS_UA);
+            break;
+        case 5:
+            LOG_INFO("使用通道 5: macOS");
+            snprintf(cfg->user_agent, USER_AGENT_LEN, MACOS_UA);
+            break;
+        default:
+            LOG_WARN("配置 %" PRIu8 " channel 参数错误, 使用默认通道 3 (Android)", cfg_no);
+            cfg->chn = 3;
+            snprintf(cfg->user_agent, USER_AGENT_LEN, ANDROID_UA);
+            break;
     }
 }
 
@@ -591,18 +591,18 @@ void get_fmt_time(char* buf, const TimeFormat fmt)
 #endif
     switch (fmt)
     {
-    case CONSOLE_FORMAT:
-        if (strftime(buf, 32, "%Y-%m-%d %H:%M:%S", &local_tm) == 0)
-        {
-            fprintf(stderr, "ERROR: 格式化时间失败\n");
+        case CONSOLE_FORMAT:
+            if (strftime(buf, 32, "%Y-%m-%d %H:%M:%S", &local_tm) == 0)
+            {
+                fprintf(stderr, "ERROR: 格式化时间失败\n");
+                return;
+            }
             return;
-        }
-        return;
-    case FILE_FORMAT:
-        if (strftime(buf, 32, "%Y%m%d-%H%M%S", &local_tm) == 0)
-        {
-            fprintf(stderr, "ERROR: 格式化时间失败\n");
-        }
+        case FILE_FORMAT:
+            if (strftime(buf, 32, "%Y%m%d-%H%M%S", &local_tm) == 0)
+            {
+                fprintf(stderr, "ERROR: 格式化时间失败\n");
+            }
     }
 }
 
@@ -620,77 +620,77 @@ char* create_xml_payload(const XmlChoose choose)
     uint16_t xml_len = 0;
     switch (choose)
     {
-    case GET_TICKET:
-        xml_len = snprintf(xml, XML_BUFFER_SIZE,
-            "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n"
-            "<request>\n"
-            "    <user-agent>%s</user-agent>\n"
-            "    <client-id>%s</client-id>\n"
-            "    <local-time>%s</local-time>\n"
-            "    <host-name>%s</host-name>\n"
-            "    <ipv4>%s</ipv4>\n"
-            "    <ipv6></ipv6>\n"
-            "    <mac>%s</mac>\n"
-            "    <ostag>%s</ostag>\n"
-            "    <gwip>%s</gwip>\n"
-            "</request>\n",
-            safe_str(g_prog_status[tl_thread_idx].login_cfg.user_agent),
-            safe_str(g_prog_status[tl_thread_idx].auth_cfg.client_id),
-            safe_str(cur_tm),
-            safe_str(g_prog_status[tl_thread_idx].auth_cfg.host_name),
-            safe_str(g_prog_status[tl_thread_idx].auth_cfg.client_ip),
-            safe_str(g_prog_status[tl_thread_idx].auth_cfg.mac_addr),
-            safe_str(g_prog_status[tl_thread_idx].auth_cfg.ostag),
-            safe_str(g_prog_status[tl_thread_idx].auth_cfg.ac_ip)
-        );
-        break;
-    case LOGIN:
-        xml_len = snprintf(xml, XML_BUFFER_SIZE,
-            "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n"
-            "<request>\n"
-            "    <user-agent>%s</user-agent>\n"
-            "    <client-id>%s</client-id>\n"
-            "    <ticket>%s</ticket>\n"
-            "    <local-time>%s</local-time>\n"
-            "    <userid>%s</userid>\n"
-            "    <passwd>%s</passwd>\n"
-            "</request>\n",
-            safe_str(g_prog_status[tl_thread_idx].login_cfg.user_agent),
-            safe_str(g_prog_status[tl_thread_idx].auth_cfg.client_id),
-            safe_str(g_prog_status[tl_thread_idx].auth_cfg.ticket),
-            safe_str(cur_tm),
-            safe_str(g_prog_status[tl_thread_idx].login_cfg.usr),
-            safe_str(g_prog_status[tl_thread_idx].login_cfg.pwd)
-        );
-        break;
-    case HEART_BEAT:
-    case TERM:
-        xml_len = snprintf(xml, XML_BUFFER_SIZE,
-            "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n"
-            "<request>\n"
-            "    <user-agent>%s</user-agent>\n"
-            "    <client-id>%s</client-id>\n"
-            "    <local-time>%s</local-time>\n"
-            "    <host-name>%s</host-name>\n"
-            "    <ipv4>%s</ipv4>\n"
-            "    <ticket>%s</ticket>\n"
-            "    <ipv6></ipv6>\n"
-            "    <mac>%s</mac>\n"
-            "    <ostag>%s</ostag>\n"
-            "</request>\n",
-            safe_str(g_prog_status[tl_thread_idx].login_cfg.user_agent),
-            safe_str(g_prog_status[tl_thread_idx].auth_cfg.client_id),
-            safe_str(cur_tm),
-            safe_str(g_prog_status[tl_thread_idx].auth_cfg.host_name),
-            safe_str(g_prog_status[tl_thread_idx].auth_cfg.client_ip),
-            safe_str(g_prog_status[tl_thread_idx].auth_cfg.ticket),
-            safe_str(g_prog_status[tl_thread_idx].auth_cfg.mac_addr),
-            safe_str(g_prog_status[tl_thread_idx].auth_cfg.ostag)
-        );
-        break;
-    default:
-        LOG_ERROR("XML 选择代码错误");
-        return NULL;
+        case GET_TICKET:
+            xml_len = snprintf(xml, XML_BUFFER_SIZE,
+                               "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n"
+                               "<request>\n"
+                               "    <user-agent>%s</user-agent>\n"
+                               "    <client-id>%s</client-id>\n"
+                               "    <local-time>%s</local-time>\n"
+                               "    <host-name>%s</host-name>\n"
+                               "    <ipv4>%s</ipv4>\n"
+                               "    <ipv6></ipv6>\n"
+                               "    <mac>%s</mac>\n"
+                               "    <ostag>%s</ostag>\n"
+                               "    <gwip>%s</gwip>\n"
+                               "</request>\n",
+                               safe_str(g_prog_status[tl_thread_idx].login_cfg.user_agent),
+                               safe_str(g_prog_status[tl_thread_idx].auth_cfg.client_id),
+                               safe_str(cur_tm),
+                               safe_str(g_prog_status[tl_thread_idx].auth_cfg.host_name),
+                               safe_str(g_prog_status[tl_thread_idx].auth_cfg.client_ip),
+                               safe_str(g_prog_status[tl_thread_idx].auth_cfg.mac_addr),
+                               safe_str(g_prog_status[tl_thread_idx].auth_cfg.ostag),
+                               safe_str(g_prog_status[tl_thread_idx].auth_cfg.ac_ip)
+            );
+            break;
+        case LOGIN:
+            xml_len = snprintf(xml, XML_BUFFER_SIZE,
+                               "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n"
+                               "<request>\n"
+                               "    <user-agent>%s</user-agent>\n"
+                               "    <client-id>%s</client-id>\n"
+                               "    <ticket>%s</ticket>\n"
+                               "    <local-time>%s</local-time>\n"
+                               "    <userid>%s</userid>\n"
+                               "    <passwd>%s</passwd>\n"
+                               "</request>\n",
+                               safe_str(g_prog_status[tl_thread_idx].login_cfg.user_agent),
+                               safe_str(g_prog_status[tl_thread_idx].auth_cfg.client_id),
+                               safe_str(g_prog_status[tl_thread_idx].auth_cfg.ticket),
+                               safe_str(cur_tm),
+                               safe_str(g_prog_status[tl_thread_idx].login_cfg.usr),
+                               safe_str(g_prog_status[tl_thread_idx].login_cfg.pwd)
+            );
+            break;
+        case HEART_BEAT:
+        case TERM:
+            xml_len = snprintf(xml, XML_BUFFER_SIZE,
+                               "<?xml version=\"1.0\" encoding=\"utf-8\"?>\n"
+                               "<request>\n"
+                               "    <user-agent>%s</user-agent>\n"
+                               "    <client-id>%s</client-id>\n"
+                               "    <local-time>%s</local-time>\n"
+                               "    <host-name>%s</host-name>\n"
+                               "    <ipv4>%s</ipv4>\n"
+                               "    <ticket>%s</ticket>\n"
+                               "    <ipv6></ipv6>\n"
+                               "    <mac>%s</mac>\n"
+                               "    <ostag>%s</ostag>\n"
+                               "</request>\n",
+                               safe_str(g_prog_status[tl_thread_idx].login_cfg.user_agent),
+                               safe_str(g_prog_status[tl_thread_idx].auth_cfg.client_id),
+                               safe_str(cur_tm),
+                               safe_str(g_prog_status[tl_thread_idx].auth_cfg.host_name),
+                               safe_str(g_prog_status[tl_thread_idx].auth_cfg.client_ip),
+                               safe_str(g_prog_status[tl_thread_idx].auth_cfg.ticket),
+                               safe_str(g_prog_status[tl_thread_idx].auth_cfg.mac_addr),
+                               safe_str(g_prog_status[tl_thread_idx].auth_cfg.ostag)
+            );
+            break;
+        default:
+            LOG_ERROR("XML 选择代码错误");
+            return NULL;
     }
     if (xml_len <= 0)
     {
@@ -705,7 +705,7 @@ char* create_xml_payload(const XmlChoose choose)
     LOG_DEBUG("创建 XML 完成");
     if (choose != LOGIN)
     {
-        LOG_VERBOSE("XML 内容为:\n%s", xml);
+        LOG_DEBUG("XML 内容为:\n%s", xml);
     }
     return xml;
 }
@@ -881,16 +881,6 @@ bool load_cfg()
         }
     }
 
-    const cJSON* log_lv = cJSON_GetObjectItem(cfg_json, "log_lv");
-    if (log_lv && cJSON_IsNumber(log_lv))
-    {
-        set_logger_level(log_lv->valueint);
-    }
-    else
-    {
-        LOG_WARN("log_lv 参数不存在, 使用默认等级 (INFO)");
-    }
-
     const cJSON* enabled = cJSON_GetObjectItem(cfg_json, "enabled");
     if (enabled == NULL)
     {
@@ -919,6 +909,58 @@ bool load_cfg()
         }
     }
     g_prog_enabled = true;
+
+    const cJSON* log_lv = cJSON_GetObjectItem(cfg_json, "log_lv");
+    if (log_lv)
+    {
+        if (cJSON_IsNumber(log_lv))
+        {
+            set_logger_level(log_lv->valueint);
+        }
+        else
+        {
+            LOG_WARN("log_lv 参数不正确, 使用默认参数 (INFO)");
+        }
+    }
+    else
+    {
+        LOG_WARN("log_lv 参数不存在, 使用默认参数 (INFO)");
+    }
+
+    const cJSON* conn_timeout = cJSON_GetObjectItem(cfg_json, "conn_timeout");
+    if (conn_timeout)
+    {
+        if (cJSON_IsNumber(conn_timeout))
+        {
+            g_conn_timeout = conn_timeout->valueint;
+        }
+        else
+        {
+            LOG_WARN("conn_timeout 参数不正确, 使用默认参数 (3s)");
+        }
+    }
+    else
+    {
+        LOG_WARN("conn_timeout 参数不存在, 使用默认参数 (3s)");
+    }
+
+
+    const cJSON* op_timeout = cJSON_GetObjectItem(cfg_json, "op_timeout");
+    if (op_timeout)
+    {
+        if (cJSON_IsNumber(op_timeout))
+        {
+            g_op_timeout = op_timeout->valueint;
+        }
+        else
+        {
+            LOG_WARN("op_timeout 参数不正确, 使用默认参数 (5s)");
+        }
+    }
+    else
+    {
+        LOG_WARN("op_timeout 参数不存在, 使用默认参数 (5s)");
+    }
 
     const cJSON* accounts = cJSON_GetObjectItem(cfg_json, "accounts");
     if (accounts == NULL || cJSON_IsArray(accounts) == false || cJSON_GetArraySize(accounts) == 0)

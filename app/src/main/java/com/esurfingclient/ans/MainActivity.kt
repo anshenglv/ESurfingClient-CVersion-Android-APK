@@ -208,6 +208,7 @@ fun MainScreenContent(
 ) {
     var selectedItem by remember { mutableIntStateOf(selectedItem) }
     val logScrollState = rememberScrollState(0)
+    val homeScrollState = rememberScrollState(0)
 
     if(autoScroll) {
         LaunchedEffect(logContent) {
@@ -272,7 +273,8 @@ fun MainScreenContent(
                             onLogFontSizeChange = onLogFontSizeChange,
                             onLogFontSizeSave = onLogFontSizeSave,
                             autoScroll = autoScroll,
-                            onAutoScrollChange = onAutoScrollChange
+                            onAutoScrollChange = onAutoScrollChange,
+                            scrollState = homeScrollState
                         )
                     }
                     VerticalDivider(
@@ -325,7 +327,8 @@ fun MainScreenContent(
                             onLogFontSizeChange = onLogFontSizeChange,
                             onLogFontSizeSave = onLogFontSizeSave,
                             autoScroll = autoScroll,
-                            onAutoScrollChange = onAutoScrollChange
+                            onAutoScrollChange = onAutoScrollChange,
+                            scrollState = homeScrollState
                         )
                     } else {
                         LogScreenContent(
@@ -373,7 +376,8 @@ fun HomeScreenContent(
     onLogFontSizeChange: (Float) -> Unit,
     onLogFontSizeSave: (Float) -> Unit,
     autoScroll: Boolean,
-    onAutoScrollChange: (Boolean) -> Unit
+    onAutoScrollChange: (Boolean) -> Unit,
+    scrollState: ScrollState
 ) {
     var expanded by remember { mutableStateOf(false) }
     var expanded2 by remember { mutableStateOf(false) }
@@ -430,7 +434,7 @@ fun HomeScreenContent(
         modifier = Modifier
             .fillMaxSize()
             .padding(start = 16.dp, end = 16.dp)
-            .verticalScroll(rememberScrollState()),
+            .verticalScroll(scrollState),
         verticalArrangement = Arrangement.spacedBy(16.dp),
         horizontalAlignment = Alignment.CenterHorizontally
     ) {

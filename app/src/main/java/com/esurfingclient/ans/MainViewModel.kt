@@ -130,7 +130,21 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             if (logDir.exists() && logDir.isDirectory) {
                 logs = logDir.listFiles { _, name -> name.endsWith(".log") }
                     ?.sortedByDescending { it.name } ?: emptyList()
-                logContent = if (!logs.isEmpty()) { logs[0].readText() } else { "" }
+                if (logs.isNotEmpty()) {
+                    val last20Lines = try { logs[0].readLines().takeLast(30) } catch (_: Exception) { emptyList() }
+                    val lastLineOfCurrent = logContent.split("\n").lastOrNull { it.isNotBlank() }
+                    val matchIndex = last20Lines.indexOfLast { it == lastLineOfCurrent }
+                    val linesToAdd = if (matchIndex != -1) {
+                        last20Lines.subList(matchIndex + 1, last20Lines.size)
+                    } else {
+                        last20Lines
+                    }
+                    if (linesToAdd.isNotEmpty()) {
+                        logContent = (logContent + "\n" + linesToAdd.joinToString("\n")).trimStart('\n')
+                    }
+                } else {
+                    logContent = ""
+                }
                 lastReadLineCount = 10001
             }
         } else {
@@ -158,6 +172,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         val config = JSONObject()
         config.put("enabled", true)
         config.put("log_lv", logLv.toInt())
+        config.put("conn_timeout", 7)
+        config.put("op_timeout", 10)
 
         val accounts = JSONArray()
         val account = JSONObject()

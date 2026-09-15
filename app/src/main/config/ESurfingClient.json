@@ -1,12 +1,15 @@
+
 {
   "enabled": false,
-  "log_lv": 4,
+  "log_lv":  4,
+  "conn_timeout": 7,
+  "op_timeout":   10,
   "accounts": [
     {
       "username": "",
       "password": "",
-      "channel": "3",
-      "mark": "",
+      "channel":  3,
+      "mark":     "",
       "time_windows": []
     }
   ]
