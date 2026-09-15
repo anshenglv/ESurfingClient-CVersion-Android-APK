@@ -15,8 +15,8 @@ android {
         applicationId = "com.esurfingclient.ans"
         minSdk = 28
         targetSdk = 37
-        versionCode = 260913
-        versionName = "2.4"
+        versionCode = 260915
+        versionName = "2.5"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 

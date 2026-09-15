@@ -724,7 +724,7 @@ fun HomeScreenContent(
                     val versionCode = context.packageManager
                         .getPackageInfo(context.packageName, 0)
                         .longVersionCode
-                    Text(text = "$versionName ($versionCode) | 2.0.9-r1",fontSize = 14.sp)
+                    Text(text = "$versionName ($versionCode) | 2.0.9-r3",fontSize = 14.sp)
                 }
                 HorizontalDivider(thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant)
                 Column(modifier = Modifier.fillMaxWidth()){
