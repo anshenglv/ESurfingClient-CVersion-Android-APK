@@ -122,8 +122,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private var lastReadLineCount = 0
     private fun updateLogs() {
         val logFile = File(context.filesDir, "logs/run.log")
-        if(isFirstStartup){ isFirstStartup = false; return }
         if (!logFile.exists()) {
+            if(isFirstStartup){ isFirstStartup = false; return }
             var logs by mutableStateOf(emptyList<File>())
             val logDir = File(context.filesDir, "logs")
 
@@ -134,6 +134,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
                 lastReadLineCount = 10001
             }
         } else {
+            if(isFirstStartup){ isFirstStartup = false }
             try {
                 val allLines = logFile.readLines()
                 if (allLines.size < lastReadLineCount) {
