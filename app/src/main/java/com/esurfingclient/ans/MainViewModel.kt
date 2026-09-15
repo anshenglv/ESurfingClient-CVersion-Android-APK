@@ -32,7 +32,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     var initialLogFontSize by mutableFloatStateOf(10f)
     var logFontSize by mutableFloatStateOf(10f)
     var wifiOnly by mutableStateOf(false)
-
     var serviceStatus by mutableStateOf(ServiceStatus.STOPPED)
     var autoScroll by mutableStateOf(true)
     var fabPositionX by mutableFloatStateOf(-1f)
@@ -42,6 +41,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private var logJob: Job? = null
     private var networkCallback: ConnectivityManager.NetworkCallback? = null
     private val context: Context get() = getApplication()
+    private var isFirstStartup by mutableStateOf(true)
 
     init {
         loadConfig()
@@ -122,7 +122,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private var lastReadLineCount = 0
     private fun updateLogs() {
         val logFile = File(context.filesDir, "logs/run.log")
-
+        if(isFirstStartup){ isFirstStartup = false; return }
         if (!logFile.exists()) {
             var logs by mutableStateOf(emptyList<File>())
             val logDir = File(context.filesDir, "logs")
