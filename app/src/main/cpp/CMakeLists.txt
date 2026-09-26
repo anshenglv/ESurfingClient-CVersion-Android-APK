@@ -40,7 +40,7 @@ if (WIN32)
 elseif (ANDROID)
     add_definitions(-DCURL_STATICLIB)
 
-    #set(BUILD_SHARED_LIBS OFF)
+    set(BUILD_SHARED_LIBS OFF)
     set(CURL_USE_STATIC_LIBS TRUE)
 
     set(CMAKE_FIND_LIBRARY_SUFFIXES .a ${CMAKE_FIND_LIBRARY_SUFFIXES})
@@ -53,20 +53,20 @@ else ()
     set(CMAKE_FIND_LIBRARY_SUFFIXES .a ${CMAKE_FIND_LIBRARY_SUFFIXES})
 endif ()
 
-set(ANDROID_ARM64_ROOT "D:/curl-android-arm64")
+    set(ANDROID_ARM64_ROOT "D:/curl-android-arm64")
 
-set(CURL_INCLUDE_DIR "${ANDROID_ARM64_ROOT}/include")
-set(CURL_LIBRARY "${ANDROID_ARM64_ROOT}/lib/libcurl.a")
+    set(CURL_INCLUDE_DIR "${ANDROID_ARM64_ROOT}/include")
+    set(CURL_LIBRARY "${ANDROID_ARM64_ROOT}/lib/libcurl.a")
 
-# Define targets for these static libraries to mimic find_package results
-add_library(CURL::libcurl STATIC IMPORTED)
-set_target_properties(CURL::libcurl PROPERTIES
-        IMPORTED_LOCATION "${CURL_LIBRARY}"
-        INTERFACE_INCLUDE_DIRECTORIES "${CURL_INCLUDE_DIR}"
-        INTERFACE_COMPILE_DEFINITIONS "CURL_STATICLIB"
-)
+    # Define targets for these static libraries to mimic find_package results
+    add_library(CURL::libcurl STATIC IMPORTED)
+    set_target_properties(CURL::libcurl PROPERTIES
+            IMPORTED_LOCATION "${CURL_LIBRARY}"
+            INTERFACE_INCLUDE_DIRECTORIES "${CURL_INCLUDE_DIR}"
+            INTERFACE_COMPILE_DEFINITIONS "CURL_STATICLIB"
+    )
 
-message(STATUS "Using manual Android ARM64 libraries from ${ANDROID_ARM64_ROOT}")
+    message(STATUS "Using manual Android ARM64 libraries from ${ANDROID_ARM64_ROOT}")
 
 add_library(ans SHARED
         third_party/7z/LzmaDec.c
@@ -151,7 +151,7 @@ if (NOT __OPENWRT__)
     add_custom_target(CopyPortal ALL
             COMMAND ${CMAKE_COMMAND} -E remove_directory "${CMAKE_CURRENT_BINARY_DIR}/portal"
             COMMAND ${CMAKE_COMMAND} -E copy_directory
-                "${CMAKE_CURRENT_SOURCE_DIR}/portal"
+                "${CMAKE_CURRENT_SOURCE_DIR}/../assets/portal"
                 "${CMAKE_CURRENT_BINARY_DIR}/portal"
             COMMENT "Copy 'portal' to build dir"
     )
@@ -200,6 +200,6 @@ target_compile_options(ans PRIVATE -Os)
 
 target_compile_options(ans PRIVATE -Wall -Wextra -Wno-unused-parameter)
 
-    set_target_properties(ans PROPERTIES
+set_target_properties(ans PROPERTIES
             LINK_FLAGS "-Wl,--strip-all -Wl,--exclude-libs,ALL"
     )

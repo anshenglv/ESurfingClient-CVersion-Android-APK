@@ -211,8 +211,6 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             } catch (e: Exception) {
                 e.printStackTrace()
             }
-        } else {
-            saveConfig()
         }
     }
 

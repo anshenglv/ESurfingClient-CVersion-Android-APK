@@ -690,6 +690,40 @@ fun HomeScreenContent(
             }
         }
 
+        if(serviceStatus == ServiceStatus.RUNNING) {
+            Card(
+                colors = CardDefaults.cardColors(containerColor = MaterialTheme.colorScheme.surfaceContainer),
+                shape = RoundedCornerShape(24.dp),
+                modifier = Modifier.fillMaxWidth(),
+                onClick = {}
+            )
+            {
+                Row(
+                    modifier = Modifier
+                        .fillMaxSize().padding(16.dp),
+                    verticalAlignment = Alignment.Bottom,
+                    horizontalArrangement = Arrangement.Start
+                ) {
+                    Text("前往 Web 管理：")
+                    Text(
+                        buildAnnotatedString {
+                            withLink(
+                                LinkAnnotation.Url(
+                                    "http://localhost:8888",
+                                    TextLinkStyles(
+                                        style = SpanStyle(
+                                            color = MaterialTheme.colorScheme.primary,
+                                            textDecoration = TextDecoration.Underline
+                                        )
+                                    )
+                                )
+                            ) { append("http://localhost:8888") }
+                        }, lineHeight = 21.sp, fontSize = 14.sp
+                    )
+                }
+            }
+        }
+
         Text(
             text = "关于",
             style = MaterialTheme.typography.bodyMedium,
@@ -706,7 +740,7 @@ fun HomeScreenContent(
         {
             Column(
                 modifier = Modifier
-                    .fillMaxWidth()
+                    .fillMaxSize()
                     .padding(16.dp),
                 verticalArrangement = Arrangement.spacedBy(8.dp)
             ){

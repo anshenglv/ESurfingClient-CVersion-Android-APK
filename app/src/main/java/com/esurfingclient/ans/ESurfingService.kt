@@ -7,6 +7,7 @@ import android.app.Service
 import android.content.Intent
 import android.os.IBinder
 import androidx.core.app.NotificationCompat
+import java.io.File
 
 enum class ServiceStatus {
     STOPPED, RUNNING, STOPPING
@@ -20,12 +21,44 @@ class ESurfingService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
+        copyPortalAssets()
+
         val notification = createNotification()
         startForeground(1, notification)
         
         startNative(filesDir.absolutePath)
         
         return START_STICKY
+    }
+
+    private fun copyPortalAssets() {
+        val portalDir = File(filesDir, "portal")
+        try {
+            val assetManager = assets
+            fun copyRecursive(assetPath: String, targetDir: File) {
+                val files = assetManager.list(assetPath) ?: return
+                if (!targetDir.exists()) {
+                    targetDir.mkdirs()
+                }
+                for (filename in files) {
+                    val outFile = File(targetDir, filename)
+                    val subPath = "$assetPath/$filename"
+                    val subFiles = assetManager.list(subPath)
+                    if (!subFiles.isNullOrEmpty()) {
+                        outFile.mkdirs()
+                        copyRecursive(subPath, outFile)
+                    } else {
+                        assetManager.open(subPath).use { input ->
+                            outFile.outputStream().use { output ->
+                                input.copyTo(output)
+                            }
+                        }
+                    }
+                }
+            }
+            copyRecursive("portal", portalDir)
+        } catch (_: Exception) {
+        }
     }
 
     override fun onDestroy() {
@@ -70,7 +103,7 @@ class ESurfingService : Service() {
                     2 -> ServiceStatus.STOPPING
                     else -> ServiceStatus.STOPPED
                 }
-            } catch (e: Exception) {
+            } catch (_: Exception) {
                 ServiceStatus.STOPPED
             }
         }

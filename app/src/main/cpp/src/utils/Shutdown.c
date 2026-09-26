@@ -93,7 +93,7 @@ void shut(const int8_t exit_code)
     }
 #endif
 
-#if !defined(__OPENWRT__) && !defined(__ANDROID__)
+#if !defined(__OPENWRT__)
     if (g_need_restart)
     {
         restart_process();

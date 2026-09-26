@@ -4,7 +4,7 @@ plugins {
 }
 
 kotlin {
-    jvmToolchain(17)
+    jvmToolchain(21)
 }
 
 android {
@@ -15,8 +15,8 @@ android {
         applicationId = "com.esurfingclient.ans"
         minSdk = 28
         targetSdk = 37
-        versionCode = 260915
-        versionName = "2.5"
+        versionCode = 260927
+        versionName = "2.6"
 
         testInstrumentationRunner = "androidx.test.runner.AndroidJUnitRunner"
 
@@ -36,8 +36,8 @@ android {
     }
 
     compileOptions {
-        sourceCompatibility = JavaVersion.VERSION_17
-        targetCompatibility = JavaVersion.VERSION_17
+        sourceCompatibility = JavaVersion.VERSION_21
+        targetCompatibility = JavaVersion.VERSION_21
     }
 
     externalNativeBuild {
