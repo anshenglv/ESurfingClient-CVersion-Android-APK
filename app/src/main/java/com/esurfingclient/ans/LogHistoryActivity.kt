@@ -25,7 +25,6 @@ import androidx.compose.ui.geometry.Offset
 import androidx.compose.ui.geometry.Size
 import androidx.compose.ui.graphics.Color
 import androidx.compose.ui.platform.LocalContext
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.unit.Dp
 import androidx.compose.ui.unit.dp
 import com.esurfingclient.ans.ui.theme.ESurfingTheme
@@ -78,7 +77,7 @@ fun LogHistoryScreen(onBack: () -> Unit, onLogClick: (File) -> Unit) {
         topBar = {
             TopAppBar(
                 colors = TopAppBarDefaults.topAppBarColors(MaterialTheme.colorScheme.surfaceContainerHighest),
-                title = { Text(stringResource(R.string.history_logs)) },
+                title = { Text("历史日志") },
                 navigationIcon = {
                     IconButton(onClick = onBack) {
                         Icon(Icons.AutoMirrored.Filled.ArrowBack, contentDescription = null)
@@ -115,7 +114,7 @@ fun LogHistoryScreen(onBack: () -> Unit, onLogClick: (File) -> Unit) {
     ) { padding ->
         if (logs.isEmpty()) {
             Box(Modifier.fillMaxSize().padding(padding), contentAlignment = Alignment.Center) {
-                Text(stringResource(R.string.no_logs))
+                Text("暂无日志…")
             }
         } else {
             val listState = rememberLazyListState()
@@ -167,8 +166,8 @@ fun LogHistoryScreen(onBack: () -> Unit, onLogClick: (File) -> Unit) {
     if (showDeleteDialog) {
         AlertDialog(
             onDismissRequest = { showDeleteDialog = false },
-            title = { Text(stringResource(R.string.delete)) },
-            text = { Text(stringResource(R.string.confirm_delete)) },
+            title = { Text("删除") },
+            text = { Text("确定删除选中的日志文件吗？") },
             confirmButton = {
                 TextButton(onClick = {
                     selectedLogs.forEach { it.delete() }
@@ -177,12 +176,12 @@ fun LogHistoryScreen(onBack: () -> Unit, onLogClick: (File) -> Unit) {
                     isMultiSelectMode = false
                     showDeleteDialog = false
                 }) {
-                    Text(stringResource(R.string.delete), color = MaterialTheme.colorScheme.error)
+                    Text("删除", color = MaterialTheme.colorScheme.error)
                 }
             },
             dismissButton = {
                 TextButton(onClick = { showDeleteDialog = false }) {
-                    Text(stringResource(R.string.cancel))
+                    Text("取消")
                 }
             }
         )

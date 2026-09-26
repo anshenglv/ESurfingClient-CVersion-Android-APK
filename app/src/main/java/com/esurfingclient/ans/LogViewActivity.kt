@@ -77,7 +77,7 @@ fun LogViewScreen(file: File, onBack: () -> Unit) {
             context.contentResolver.openOutputStream(it)?.use { outputStream ->
                 outputStream.write(file.readBytes())
             }
-            Toast.makeText(context, R.string.export_success, Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, "文件已保存", Toast.LENGTH_SHORT).show()
         }
     }
 
@@ -103,7 +103,7 @@ fun LogViewScreen(file: File, onBack: () -> Unit) {
                             putExtra(Intent.EXTRA_STREAM, uri)
                             addFlags(Intent.FLAG_GRANT_READ_URI_PERMISSION)
                         }
-                        context.startActivity(Intent.createChooser(intent, context.getString(R.string.share)))
+                        context.startActivity(Intent.createChooser(intent, "分享"))
                     }) {
                         Icon(Icons.Default.Share, contentDescription = null)
                     }

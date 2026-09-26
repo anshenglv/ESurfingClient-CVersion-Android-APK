@@ -20,7 +20,7 @@ class ESurfingService : Service() {
     }
 
     override fun onStartCommand(intent: Intent?, flags: Int, startId: Int): Int {
-        val notification = createNotification(getString(R.string.notif_content))
+        val notification = createNotification()
         startForeground(1, notification)
         
         startNative(filesDir.absolutePath)
@@ -38,17 +38,17 @@ class ESurfingService : Service() {
     private fun createNotificationChannel() {
         val serviceChannel = NotificationChannel(
             CHANNEL_ID,
-            getString(R.string.app_name) + " Service Channel",
+            "认证服务通道",
             NotificationManager.IMPORTANCE_DEFAULT
         )
         val manager = getSystemService(NotificationManager::class.java)
         manager.createNotificationChannel(serviceChannel)
     }
 
-    private fun createNotification(content: String): Notification {
+    private fun createNotification(): Notification {
         return NotificationCompat.Builder(this, CHANNEL_ID)
-            .setContentTitle(getString(R.string.notif_title))
-            .setContentText(content)
+            .setContentTitle("广东校园重制版")
+            .setContentText("认证服务正在运行")
             .setSmallIcon(R.mipmap.icon)
             .build()
     }

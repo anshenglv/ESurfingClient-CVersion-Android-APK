@@ -53,7 +53,6 @@ import androidx.compose.ui.platform.LocalContext
 import androidx.compose.ui.platform.LocalDensity
 import androidx.compose.ui.platform.LocalInspectionMode
 import androidx.lifecycle.compose.LocalLifecycleOwner
-import androidx.compose.ui.res.stringResource
 import androidx.compose.ui.text.LinkAnnotation
 import androidx.compose.ui.text.SpanStyle
 import androidx.compose.ui.text.TextLinkStyles
@@ -144,7 +143,7 @@ fun MainScreen(
         onLogLvChange = { viewModel.logLv = it },
         onSaveClick = {
             viewModel.saveConfig()
-            Toast.makeText(context, R.string.config_saved, Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, "配置已保存", Toast.LENGTH_SHORT).show()
         },
         onHistoryLogsClick = {
             context.startActivity(Intent(context, LogHistoryActivity::class.java))
@@ -157,7 +156,7 @@ fun MainScreen(
         onLogFontSizeSave = { viewModel.saveLogFontSize(it) },
         onClearLogsClick = {
             viewModel.logContent = ""
-            Toast.makeText(context, R.string.logs_cleared, Toast.LENGTH_SHORT).show()
+            Toast.makeText(context, "日志已清空", Toast.LENGTH_SHORT).show()
         },
         serviceStatus = viewModel.serviceStatus,
         fabPositionX = viewModel.fabPositionX,
@@ -225,13 +224,13 @@ fun MainScreenContent(
                     NavigationBar {
                         NavigationBarItem(
                             icon = { Icon(Icons.Filled.Home, contentDescription = null) },
-                            label = { Text(stringResource(R.string.nav_home)) },
+                            label = { Text("首页") },
                             selected = selectedItem == 0,
                             onClick = { selectedItem = 0; onSelectedItemSave(0) }
                         )
                         NavigationBarItem(
                             icon = { Icon(Icons.Filled.Terminal, contentDescription = null) },
-                            label = { Text(stringResource(R.string.nav_logs)) },
+                            label = { Text("运行") },
                             selected = selectedItem == 1,
                             onClick = { selectedItem = 1; onSelectedItemSave(1) }
                         )
@@ -394,7 +393,7 @@ fun HomeScreenContent(
         "1" to "FATAL",
         "2" to "ERROR",
         "3" to "WARN",
-        "4" to stringResource(R.string.log_lv_4),
+        "4" to "INFO(默认)",
         "5" to "DEBUG",
         "6" to "VERBOSE"
     )
@@ -439,7 +438,7 @@ fun HomeScreenContent(
         horizontalAlignment = Alignment.CenterHorizontally
     ) {
         Text(
-            text = stringResource(R.string.app_name),
+            text = "广东校园重制版",
             style = MaterialTheme.typography.headlineMedium,
             color = MaterialTheme.colorScheme.primary,
             modifier = Modifier.padding(top = 16.dp)
@@ -461,7 +460,7 @@ fun HomeScreenContent(
                     verticalAlignment = Alignment.CenterVertically,
                 ) {
                     Icon(Icons.Filled.Warning, contentDescription = null,modifier = Modifier.size(18.dp))
-                    Text(stringResource(R.string.battery_opt_title),modifier = Modifier.padding(start = 4.dp))
+                    Text("电池优化设置",modifier = Modifier.padding(start = 4.dp))
                     Spacer(modifier = Modifier.weight(1f))
                     Icon(Icons.Filled.ArrowOutward, contentDescription = null, modifier = Modifier.size(22.dp)
                     )
@@ -477,7 +476,7 @@ fun HomeScreenContent(
             OutlinedTextField(
                 value = username,
                 onValueChange = onUsernameChange,
-                label = { Text(stringResource(R.string.hint_username)) },
+                label = { Text("用户名") },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.Number),
                 modifier = Modifier.fillMaxWidth().padding(top = 8.dp, start = 12.dp, end = 12.dp, bottom = 6.dp)
             )
@@ -486,7 +485,7 @@ fun HomeScreenContent(
                 state = passwordState,
                 textObfuscationMode = if (isPasswordVisible) { TextObfuscationMode.Visible }
                     else { TextObfuscationMode.System },
-                label = { Text(stringResource(R.string.hint_password)) },
+                label = { Text("密码") },
                 keyboardOptions = KeyboardOptions(keyboardType = KeyboardType.NumberPassword),
                 trailingIcon = {
                     IconButton(onClick = { isPasswordVisible = !isPasswordVisible }) {
@@ -512,7 +511,7 @@ fun HomeScreenContent(
                     value = channelLabels[channel] ?: channel,
                     onValueChange = {},
                     readOnly = true,
-                    label = { Text(stringResource(R.string.channel_use)) },
+                    label = { Text("认证通道") },
                     trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded) },
                     colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors(),
                     modifier = Modifier.menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable).fillMaxWidth()
@@ -543,7 +542,7 @@ fun HomeScreenContent(
                     value = logLvLabels[logLv] ?: logLv,
                     onValueChange = {},
                     readOnly = true,
-                    label = { Text(stringResource(R.string.log_lv)) },
+                    label = { Text("日志等级") },
                     trailingIcon = { ExposedDropdownMenuDefaults.TrailingIcon(expanded = expanded2) },
                     colors = ExposedDropdownMenuDefaults.outlinedTextFieldColors(),
                     modifier = Modifier.menuAnchor(ExposedDropdownMenuAnchorType.PrimaryNotEditable).fillMaxWidth()
@@ -569,7 +568,7 @@ fun HomeScreenContent(
                 onClick = onSaveClick,
                 modifier = Modifier.fillMaxWidth().padding(start = 10.dp, end = 10.dp, top = 10.dp, bottom = 8.dp)
             ) {
-                Text(stringResource(R.string.btn_save))
+                Text("保存配置")
             }
         }
 
@@ -590,7 +589,7 @@ fun HomeScreenContent(
                         enabled = serviceStatus == ServiceStatus.STOPPED,
                         colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.primary)
                     ) {
-                        Text(stringResource(R.string.btn_start))
+                        Text("启动服务")
                     }
                     Button(
                         onClick = onStopClick,
@@ -598,7 +597,7 @@ fun HomeScreenContent(
                         enabled = serviceStatus == ServiceStatus.RUNNING,
                         colors = ButtonDefaults.buttonColors(containerColor = MaterialTheme.colorScheme.error)
                     ) {
-                        Text(stringResource(R.string.btn_stop))
+                        Text("停止服务")
                     }
                 }
             }
@@ -621,7 +620,7 @@ fun HomeScreenContent(
             ) {
                 Icon(Icons.Filled.Delete, contentDescription = null, modifier = Modifier.size(18.dp))
                 Spacer(Modifier.width(8.dp))
-                Text(stringResource(R.string.btn_clear_logs))
+                Text("运行页清屏")
             }
         }
 
@@ -682,7 +681,7 @@ fun HomeScreenContent(
                 verticalAlignment = Alignment.CenterVertically,
                 horizontalArrangement = Arrangement.SpaceBetween
             ) {
-                Text(stringResource(R.string.history_logs))
+                Text("历史日志")
                 Icon(
                     Icons.AutoMirrored.Filled.ArrowForwardIos,
                     contentDescription = null,
@@ -810,7 +809,7 @@ fun LogScreenContent(
                 .padding(8.dp)
         ) {
             Text(
-                text = logContent.ifEmpty { stringResource(R.string.no_logs) },
+                text = logContent.ifEmpty { "暂无日志…" },
                 fontSize = logFontSize.sp,
                 lineHeight = 1.2.em,
                 fontFamily = FontFamily.Monospace,
@@ -900,7 +899,7 @@ fun DraggableFAB(
         }
     }
 }
-@Preview(showBackground = true, locale = "zh")
+@Preview(showBackground = true)
 @Composable
 fun MainScreenPreview() {
     ESurfingTheme {
