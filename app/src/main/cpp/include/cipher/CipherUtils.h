@@ -1,6 +1,8 @@
 #ifndef ESURFINGCLIENT_CIPHERUTILS_H
 #define ESURFINGCLIENT_CIPHERUTILS_H
 
+#include "cipher/CipherInterface.h"
+
 #include <stdint.h>
 
 #ifdef WIN32
@@ -11,6 +13,8 @@
 char* bytes_2_hex(const uint8_t* bytes, size_t len);
 
 uint8_t* hex_2_bytes(const char* hex, size_t* out_len);
+
+void zsm_blob_free(ios_zsm_blob_t* blob);
 
 void* s_malloc(size_t size);
 
@@ -36,4 +40,4 @@ void uint32_2_bytes_le(uint32_t value, uint8_t* bytes);
 
 void xor_bytes(const uint8_t* a, const uint8_t* b, uint8_t* result, size_t len);
 
-#endif // ESURFINGCLIENT_CIPHERUTILS_H
+#endif

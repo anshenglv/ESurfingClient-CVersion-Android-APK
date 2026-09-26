@@ -2,12 +2,12 @@
 #include <string>
 #include <pthread.h>
 #include <android/log.h>
-#include "utils/Shutdown.h"
 
 extern "C" {
+#include "utils/Shutdown.h"
 #include "utils/PlatformUtils.h"
 #include "utils/Logger.h"
-#include "States.h"
+#include "include/states/States.h"
 
 // Entry point defined in DialerClient.c
 extern void work();
@@ -54,7 +54,7 @@ Java_com_esurfingclient_ans_ESurfingService_startNative(JNIEnv* env, jobject thi
 
     const char* native_base_dir = env->GetStringUTFChars(base_dir, nullptr);
     set_base_dir(native_base_dir);
-    set_log_base_dir(native_base_dir);
+    //set_log_base_dir(native_base_dir);
     LOGI("Base directory set to: %s", native_base_dir);
     env->ReleaseStringUTFChars(base_dir, native_base_dir);
 

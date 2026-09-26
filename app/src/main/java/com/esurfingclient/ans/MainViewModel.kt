@@ -171,9 +171,12 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     fun saveConfig() {
         val config = JSONObject()
         config.put("enabled", true)
+        config.put("web_external_acc", false)
         config.put("log_lv", logLv.toInt())
+        config.put("log_dir", context.filesDir.path)
         config.put("conn_timeout", 7)
         config.put("op_timeout", 10)
+        config.put("web_port", 8888)
 
         val accounts = JSONArray()
         val account = JSONObject()
@@ -189,7 +192,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         config.put("accounts", accounts)
 
         val configFile = File(context.filesDir, "ESurfingClient.json")
-        configFile.writeText(config.toString(4))
+        configFile.writeText(config.toString(4).replace("\\/", "/"))
     }
 
     private fun loadConfig() {
@@ -208,6 +211,8 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
             } catch (e: Exception) {
                 e.printStackTrace()
             }
+        } else {
+            saveConfig()
         }
     }
 

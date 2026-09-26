@@ -1,39 +1,61 @@
+#include "utils/Shutdown.h"
+
+#include "states/States.h"
+
 #include "utils/PlatformUtils.h"
 #include "utils/TimeControl.h"
-#include "utils/Shutdown.h"
+#include "utils/Watchdog.h"
 #include "utils/Logger.h"
-
-#include "States.h"
-
-#include <signal.h>
-#include <stdlib.h>
-
-#if !defined(__OPENWRT__) && !defined(__ANDROID__)
-extern void restart_process();
-extern void stop_web_server();
-#endif
 
 #ifdef _WIN32
 #include <windows.h>
 extern bool get_service_mode();
+#else
+#include <stdlib.h>
+#endif
+
+#ifndef __OPENWRT__
+extern void restart_process();
+extern void stop_web_server();
+#include "control/Control.h"
 #endif
 
 void shut(const int8_t exit_code)
 {
     // 关闭流程只允许进入一次
     // (Web 端触发的重启与信号/错误触发的关闭可能同时发生)
-//    static volatile bool shutting_down = false;
-//    if (shutting_down)
-//    {
-//        LOG_WARN("程序已在关闭流程中, 忽略重复的关闭请求");
-//        return;
-//    }
-//    shutting_down = true;
+#ifndef __ANDROID__
+    static volatile bool shutting_down = false;
+    if (shutting_down)
+    {
+        LOG_WARN("程序已在关闭流程中, 忽略重复的关闭请求");
+        return;
+    }
+    shutting_down = true;
+#endif
+
+    /**
+     * 关闭流程一开始就停掉看门狗: 接下来主循环不再打卡,
+     * 不停的话它会把正常退出误判成卡死, 还会盖掉真正的退出原因
+     */
+    watchdog_stop();
 
     LOG_INFO("主程序正在关闭");
     g_need_exit = true;
 
-#if !defined(__OPENWRT__) && !defined(__ANDROID__)
+    /**
+     * 监管进程的收尾是"先停子进程再退出", 而且它自己装了信号处理,
+     * 所以这里只置退出标志, 具体的关闭顺序交给 work_supervisor() 处理。
+     * (Windows 服务收到 SCM 的停止请求时也是走这里)
+     */
+    if (g_prog_role == ROLE_SUPERVISOR)
+    {
+        return;
+    }
+
+#ifndef __OPENWRT__
+    control_server_stop(); // 先停止接受控制请求
+
     if (g_is_webserver_running)
     {
         LOG_INFO("关闭 Web 服务器");
@@ -47,6 +69,7 @@ void shut(const int8_t exit_code)
         g_thread_keep_alive = false;
     }
     time_control_stop(); // 等待时间控制定时线程退出
+
     LOG_INFO("清理资源中");
     LOG_DEBUG("关闭线程");
     for (uint8_t i = 0; i < g_prog_cnt; i++)
@@ -56,9 +79,10 @@ void shut(const int8_t exit_code)
         if (g_prog_status[i].thread != NULL)
         {
             sim_thread_join(g_prog_status[i].thread, &result_code);
-            LOG_DEBUG("认证线程退出, 退出码: %d", result_code);
+            LOG_DEBUG("认证线程 %" PRIu8 " 退出, 退出码: %d", i, result_code);
         }
     }
+
     LOG_INFO("退出程序, 退出码: %" PRIu8, exit_code);
     clean_logger();
 
@@ -82,35 +106,18 @@ void shut(const int8_t exit_code)
 }
 
 #ifdef _WIN32
-// Windows 控制台事件处理
+/**
+ * Windows 控制台事件处理
+ *
+ * 只置标志: 这个处理函数跑在系统另起的线程上, 而且随时可能被强杀,
+ * 在这里做 join / 打日志 / rename / exit 都不安全。
+ * 真正的关闭动作由各角色的主循环看到标志后执行
+ */
 static BOOL WINAPI console_handler(const DWORD ctrlType)
 {
-    switch(ctrlType)
-    {
-    case CTRL_C_EVENT:
-        LOG_DEBUG("接收到 CTRL+C 信号");
-        shut(0);
-        return TRUE;
-    case CTRL_BREAK_EVENT:
-        LOG_DEBUG("接收到 CTRL+BREAK 信号");
-        shut(0);
-        return TRUE;
-    case CTRL_CLOSE_EVENT:
-        LOG_DEBUG("接收到窗口关闭信号");
-        shut(0);
-        return TRUE;
-    case CTRL_LOGOFF_EVENT:
-        LOG_DEBUG("接收到用户注销信号");
-        shut(0);
-        return TRUE;
-    case CTRL_SHUTDOWN_EVENT:
-        LOG_DEBUG("接收到系统关机信号");
-        shut(0);
-        return TRUE;
-    default:
-        LOG_DEBUG("接收到未知控制台事件: %lu", ctrlType);
-        return FALSE;
-    }
+    (void)ctrlType;
+    g_stop_requested = 1;
+    return TRUE;
 }
 
 #else

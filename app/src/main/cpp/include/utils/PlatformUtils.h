@@ -1,10 +1,9 @@
 #ifndef ESURFINGCLIENT_PLATFORMUTILS_H
 #define ESURFINGCLIENT_PLATFORMUTILS_H
 
-#include "States.h"
+#include "config/Config.h"
 
-#include <inttypes.h>
-#include <stdint.h>
+#include "states/States.h"
 
 #ifdef _WIN32
 
@@ -31,26 +30,6 @@
 #define XML_BUFFER_SIZE 1024
 #define NAME_LENGTH 256
 
-typedef enum
-{
-    GET_TICKET = 1,
-    LOGIN = 2,
-    HEART_BEAT = 3,
-    TERM = 4
-} XmlChoose;
-
-typedef enum
-{
-    CONSOLE_FORMAT = 1,
-    FILE_FORMAT = 2
-} TimeFormat;
-
-typedef struct
-{
-    uint8_t* data;
-    size_t length;
-} bytes_t;
-
 /**
  * @brief 设置基础目录 (Android)
  * @param dir 目录路径
@@ -58,10 +37,24 @@ typedef struct
 void set_base_dir(const char* dir);
 
 /**
+ * @brief 获取基础目录 (Android)
+ * @return 基础目录路径
+ */
+const char* get_base_dir(void);
+
+/**
  * @brief 打包适配器数据
  * @return JSON 文本
  */
 char* get_adapters_json();
+
+/**
+ * @brief 截取 URL 中指定参数
+ * @param url URL 地址
+ * @param search_str_start 要查找的参数名
+ * @return 查找到的参数
+ */
+char* extract_url_param(const char* url, const char* search_str_start);
 
 /**
  * @brief 获取程序运行目录
@@ -71,12 +64,58 @@ char* get_adapters_json();
 bool get_exec_dir(char* dir_array);
 
 /**
+ * @brief 获取程序可执行文件的完整路径
+ *
+ * 监管者 fork 之后要用它 exec 出子进程, 因此必须是不依赖 cwd 的绝对路径
+ * @param path_array 路径缓冲 (至少 PATH_MAX 字节)
+ * @return 是否获取成功
+ */
+bool get_exec_path(char* path_array);
+
+/**
+ * @brief 记下启动时的父进程号
+ *
+ * 必须在程序一开始就调用: 父进程可能在启动后立刻就没了
+ */
+void record_parent_pid(void);
+
+/**
+ * @brief 父进程是否还在 (供被监管的子进程自查)
+ *
+ * 监管者被强杀时子进程不该留下来变成孤儿。判据是"当前父进程号是否还是启动时那个":
+ * 不能简单地看是不是被过继给了 init (PID 1) —— 用 setsid 之类方式主动脱离终端的
+ * 进程, 父进程本来就可能是 1, 那样会被误判成孤儿。
+ *
+ * Linux 上子进程另外登记了 PR_SET_PDEATHSIG, 父进程一死内核立刻发信号,
+ * 这里只是兜底。
+ * Windows 没有等价机制 (要彻底解决得用 Job Object), 恒返回 true。
+ * @return 父进程是否还在
+ */
+bool parent_process_alive(void);
+
+/**
  * @brief XML 解析
  * @param xml_data XML 数据
  * @param tag 提取标志
  * @return 解析后的数据
  */
 char* xml_parser(const char* xml_data, const char* tag);
+
+/**
+ * @brief 字节转 base64
+ * @param in 字节数据
+ * @param len 字节长度
+ * @return base64 码
+ */
+char* bytes2base64(const uint8_t* in, size_t len);
+
+/**
+ * @brief base64 转字节
+ * @param in base64 码
+ * @param out_len 字节长度指针
+ * @return 字节数据
+ */
+uint8_t* base642bytes(const char* in, size_t* out_len);
 
 /**
  * @brief 文本转字节
@@ -157,20 +196,15 @@ char* extract_between_tags(const char* text, const char* start_tag, const char* 
 char* clean_CDATA(const char* text);
 
 /**
- * @brief 保存配置文件
- * @param configs_str 配置文件字符串
+ * @brief 取实际使用的日志目录 (供 --print-log-dir 使用)
+ *
+ * 日志目录由配置里的 log_dir 决定 (OpenWrt 上默认 /var/log/esurfing, 日志落在它下面的
+ * logs 里), 因此只有读完配置才知道。外部脚本 (OpenWrt 的 init.d 要归档上一轮日志、
+ * LuCI 的日志页要列文件) 需要知道这个路径, 总不能让它自己去解析 JSON。
+ *
+ * 配置有问题或日志系统起不来时返回 NULL, 调用方按自己的默认值兜底
+ * @return 日志目录 (进程内静态缓冲, 不要 free), 失败返回 NULL
  */
-bool save_cfg(const char* configs_str);
+const char* print_log_dir();
 
-/**
- * @brief 加载配置文件
- */
-bool load_cfg();
-
-/**
- * @brief 获取配置文件路径
- * @return 配置文件路径
- */
-const char* get_config_file_path(void);
-
-#endif // ESURFINGCLIENT_PLATFORMUTILS_H
+#endif

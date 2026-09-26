@@ -1,10 +1,9 @@
 #include "cipher/CipherInterface.h"
 #include "cipher/KeyData.h"
-#include "utils/Logger.h"
-#include "States.h"
 
-#include <stdlib.h>
-#include <string.h>
+#include "states/States.h"
+
+#include "utils/Logger.h"
 
 static cipher_interface_t* create_cipher_factory(const char* algo_id)
 {
