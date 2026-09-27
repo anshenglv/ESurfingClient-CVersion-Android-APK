@@ -21,42 +21,8 @@ if (NOT DEFINED __OPENWRT__)
     set(__OPENWRT__ 0)
 endif ()
 
-if (__OPENWRT__)
-    add_definitions(-D__OPENWRT__=1)
-    message(STATUS "OpenWRT - yes")
-else ()
-    message(STATUS "OpenWRT - no")
-endif ()
-
-if (NOT CMAKE_BUILD_TYPE)
-    set(CMAKE_BUILD_TYPE Release)
-endif ()
-
-if (WIN32)
-    add_definitions(-DCURL_STATICLIB)
-
-    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -static -static-libgcc -static-libstdc++")
-    set(CMAKE_FIND_LIBRARY_SUFFIXES .a .lib ${CMAKE_FIND_LIBRARY_SUFFIXES})
-elseif (ANDROID)
-    add_definitions(-DCURL_STATICLIB)
-
-    set(BUILD_SHARED_LIBS OFF)
-    set(CURL_USE_STATIC_LIBS TRUE)
-
-    set(CMAKE_FIND_LIBRARY_SUFFIXES .a ${CMAKE_FIND_LIBRARY_SUFFIXES})
-else ()
-    set(CMAKE_EXE_LINKER_FLAGS "${CMAKE_EXE_LINKER_FLAGS} -pthread")
-
-    set(BUILD_SHARED_LIBS OFF)
-    set(CURL_USE_STATIC_LIBS TRUE)
-
-    set(CMAKE_FIND_LIBRARY_SUFFIXES .a ${CMAKE_FIND_LIBRARY_SUFFIXES})
-endif ()
-
-    set(ANDROID_ARM64_ROOT "D:/curl-android-arm64")
-
-    set(CURL_INCLUDE_DIR "${ANDROID_ARM64_ROOT}/include")
-    set(CURL_LIBRARY "${ANDROID_ARM64_ROOT}/lib/libcurl.a")
+    set(CURL_INCLUDE_DIR "D:/curl-android-arm64/include")
+    set(CURL_LIBRARY "D:/curl-android-arm64/lib/libcurl.a")
 
     # Define targets for these static libraries to mimic find_package results
     add_library(CURL::libcurl STATIC IMPORTED)
@@ -66,9 +32,7 @@ endif ()
             INTERFACE_COMPILE_DEFINITIONS "CURL_STATICLIB"
     )
 
-    message(STATUS "Using manual Android ARM64 libraries from ${ANDROID_ARM64_ROOT}")
-
-add_library(ans SHARED
+add_library(ESurfingClient SHARED
         third_party/7z/LzmaDec.c
         third_party/cJSON/cJSON.c
         src/cipher/algo/android/aes_double_cbc_android.c
@@ -130,8 +94,7 @@ add_library(ans SHARED
         native-lib.cpp
 )
 
-if (NOT __OPENWRT__)
-    target_sources(ans PRIVATE
+    target_sources(ESurfingClient PRIVATE
             third_party/mongoose/mongoose.c
             src/supervisor/SupervisorSignal.c
             src/supervisor/SupervisorChild.c
@@ -148,58 +111,15 @@ if (NOT __OPENWRT__)
             src/utils/Service.c
     )
 
-    add_custom_target(CopyPortal ALL
-            COMMAND ${CMAKE_COMMAND} -E remove_directory "${CMAKE_CURRENT_BINARY_DIR}/portal"
-            COMMAND ${CMAKE_COMMAND} -E copy_directory
-                "${CMAKE_CURRENT_SOURCE_DIR}/../assets/portal"
-                "${CMAKE_CURRENT_BINARY_DIR}/portal"
-            COMMENT "Copy 'portal' to build dir"
-    )
-
-    add_dependencies(ans CopyPortal)
-endif ()
-
-target_include_directories(ans PRIVATE
+target_include_directories(ESurfingClient PRIVATE
         ${CMAKE_SOURCE_DIR}/include
         ${CMAKE_SOURCE_DIR}/src
         ${CMAKE_SOURCE_DIR}/third_party
 )
 
-if (WIN32)
-    target_link_libraries(ans PRIVATE
-            CURL::libcurl
-            ws2_32
-            wldap32
-            winmm
-            crypt32
-            normaliz
-            secur32
-            bcrypt
-            iphlpapi
-    )
-elseif (ANDROID)
-    target_link_libraries(ans PRIVATE
-            CURL::libcurl
-            log
-    )
-else ()
-    target_link_libraries(ans PRIVATE
-            CURL::libcurl
-            pthread
-            dl
-    )
-    if (CMAKE_SYSTEM_NAME STREQUAL "Linux")
-        target_link_libraries(ESurfingClient PRIVATE
-                atomic
-                m
-        )
-    endif ()
-endif ()
+target_link_libraries(ESurfingClient PRIVATE
+        CURL::libcurl
+        log
+)
 
-target_compile_options(ans PRIVATE -Os)
-
-target_compile_options(ans PRIVATE -Wall -Wextra -Wno-unused-parameter)
-
-set_target_properties(ans PROPERTIES
-            LINK_FLAGS "-Wl,--strip-all -Wl,--exclude-libs,ALL"
-    )
+target_compile_options(ESurfingClient PRIVATE -Os -Wall -Wextra -Wno-unused-parameter)

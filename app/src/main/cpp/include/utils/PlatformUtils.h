@@ -31,18 +31,6 @@
 #define NAME_LENGTH 256
 
 /**
- * @brief 设置基础目录 (Android)
- * @param dir 目录路径
- */
-void set_base_dir(const char* dir);
-
-/**
- * @brief 获取基础目录 (Android)
- * @return 基础目录路径
- */
-const char* get_base_dir(void);
-
-/**
  * @brief 打包适配器数据
  * @return JSON 文本
  */
@@ -55,6 +43,12 @@ char* get_adapters_json();
  * @return 查找到的参数
  */
 char* extract_url_param(const char* url, const char* search_str_start);
+
+/**
+ * @brief 设置程序运行目录
+ * @param dir 目录路径
+ */
+void set_exec_dir(const char* dir);
 
 /**
  * @brief 获取程序运行目录

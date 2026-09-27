@@ -53,9 +53,8 @@ Java_com_esurfingclient_ans_ESurfingService_startNative(JNIEnv* env, jobject thi
     }
 
     const char* native_base_dir = env->GetStringUTFChars(base_dir, nullptr);
-    set_base_dir(native_base_dir);
-    //set_log_base_dir(native_base_dir);
-    LOGI("Base directory set to: %s", native_base_dir);
+    set_exec_dir(native_base_dir);
+    LOGI("Exec directory set to: %s", native_base_dir);
     env->ReleaseStringUTFChars(base_dir, native_base_dir);
 
     g_need_exit = false;
@@ -77,7 +76,7 @@ Java_com_esurfingclient_ans_ESurfingService_stopNative(JNIEnv* env, jobject thiz
     if (pthread_create(&stop_thread, nullptr, stop_async_thread, nullptr) == 0) {
         pthread_detach(stop_thread);
     } else {
-        // 如果创建线程失败（极少见），回退到同步模式以确保资源释放
+        // 创建独立退出线程失败，回退至阻塞退出模式
         shut(0);
         s_is_stopping = false;
     }

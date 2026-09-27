@@ -118,7 +118,7 @@ class MainActivity : ComponentActivity() {
 
     companion object {
         init {
-            System.loadLibrary("ans")
+            System.loadLibrary("ESurfingClient")
         }
     }
 }

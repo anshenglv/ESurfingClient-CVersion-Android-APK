@@ -173,7 +173,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
         config.put("enabled", true)
         config.put("web_external_acc", false)
         config.put("log_lv", logLv.toInt())
-        config.put("log_dir", context.filesDir.path)
+        config.put("log_dir", "./")
         config.put("conn_timeout", 7)
         config.put("op_timeout", 10)
         config.put("web_port", 8888)

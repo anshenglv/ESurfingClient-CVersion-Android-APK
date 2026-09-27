@@ -109,7 +109,7 @@ class ESurfingService : Service() {
         }
         
         init {
-            System.loadLibrary("ans")
+            System.loadLibrary("ESurfingClient")
         }
     }
 }

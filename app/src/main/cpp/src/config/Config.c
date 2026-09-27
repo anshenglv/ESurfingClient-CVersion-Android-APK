@@ -13,12 +13,13 @@
 #include <stdlib.h>
 #include <string.h>
 
-#if defined(__OPENWRT__)
+#ifdef __OPENWRT__
 static const char config_file[] = "/etc/config/esurfingclient";
 #else
 #define DIALER_CONFIG_FILE "ESurfingClient.json"
 static char config_file[PATH_MAX + 1 + sizeof(DIALER_CONFIG_FILE)];
 #endif
+
 static const char s_default_cfg[] = "{\n"
                                     "   \"enabled\": false,\n"
                                     "   \"web_external_acc\": false,\n"
@@ -93,22 +94,8 @@ bool save_cfg(const char* configs_str)
     return saved;
 }
 
-#ifdef __ANDROID__
-static void update_android_config_file_path(void)
-{
-    const char* base_dir = get_base_dir();
-    if (base_dir && base_dir[0] != '\0')
-    {
-        snprintf(config_file, sizeof(config_file), "%s/ESurfingClient.json", base_dir);
-    }
-}
-#endif
-
 const char* get_config_file_path(void)
 {
-#ifdef __ANDROID__
-    update_android_config_file_path();
-#endif
     return config_file;
 }
 
@@ -162,9 +149,6 @@ void cfg_halt()
 
 const char* get_config_path(void)
 {
-#ifdef __ANDROID__
-    update_android_config_file_path();
-#endif
     return config_file;
 }
 
@@ -187,43 +171,14 @@ bool load_cfg()
     }
 #ifndef __OPENWRT__
 
-#ifndef __ANDROID__
-
     char dir[PATH_MAX];
     if (get_exec_dir(dir) == false)
     {
         LOG_ERROR("获取可执行文件路径失败, 请检查权限后重启");
-        while (true)
-        {
-            if (g_need_exit)
-            {
-                return false;
-            }
-            sleep_ms(10000, true);
-        }
+        cfg_halt();
+        return false;
     }
     snprintf(config_file, PATH_MAX + 1 + sizeof(DIALER_CONFIG_FILE), "%s%c%s", safe_str(dir), SEP, DIALER_CONFIG_FILE);
-#else
-
-    update_android_config_file_path();
-    const char* base_dir = get_base_dir();
-    // 在 Android 上确保配置目录存在
-    if (base_dir && base_dir[0] != '\0')
-    {
-        if (mkdir(base_dir, 0755) != 0 && errno != EEXIST)
-        {
-            LOG_ERROR("获取 Android 配置目录失败");
-            while (true)
-            {
-                if (g_need_exit)
-                {
-                    return false;
-                }
-                sleep_ms(10000, true);
-            }
-        }
-    }
-#endif
 
 #endif
 

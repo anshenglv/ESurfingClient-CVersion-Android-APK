@@ -7,25 +7,26 @@
 #include <stdlib.h>
 #include <string.h>
 
-static char s_android_base_dir[PATH_MAX] = "";
+static char s_exec_dir[PATH_MAX] = "";
 
-void set_base_dir(const char* dir)
+void set_exec_dir(const char* dir)
 {
-    if (dir)
+    if (dir != NULL)
     {
-        strncpy(s_android_base_dir, dir, PATH_MAX - 1);
-        s_android_base_dir[PATH_MAX - 1] = '\0';
+        snprintf(s_exec_dir, sizeof(s_exec_dir), "%s", dir);
     }
-}
-
-const char* get_base_dir(void)
-{
-    return s_android_base_dir;
 }
 
 bool get_exec_path(char* path_array)
 {
     if (path_array == NULL) return false;
+
+    if (s_exec_dir[0] != '\0')
+    {
+        const uint16_t len = snprintf(path_array, PATH_MAX, "%s%cESurfingClient", s_exec_dir, SEP);
+        if ((size_t)len >= PATH_MAX) return false;
+        return true;
+    }
 
 #ifdef _WIN32
     char path[MAX_PATH];
@@ -62,13 +63,12 @@ bool get_exec_dir(char* dir_array)
 {
     if (dir_array == NULL) return false;
 
-#ifdef __ANDROID__
-    if (s_android_base_dir[0] != '\0')
+    if (s_exec_dir[0] != '\0')
     {
-        snprintf(dir_array, PATH_MAX, "%s", s_android_base_dir);
+        const uint16_t len = snprintf(dir_array, PATH_MAX, "%s", s_exec_dir);
+        if ((size_t)len >= PATH_MAX) return false;
         return true;
     }
-#endif
 
     char path[PATH_MAX];
     if (get_exec_path(path) == false) return false;
