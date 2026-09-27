@@ -1,10 +1,10 @@
 ## ESurfingClient-CVersion Android 移植总结
+>
+>由于我对git和github的不熟悉，加上前面Push和commit时不仔细，导致一堆问题，因此我用最蠢的方法删库重建，所以之前star过的需要重新star一下。还有由于之前打的Tag就不一定匹配对应的版本，所以现在的Tag也不一定对应当时版本的代码。
 
-由于我对git和github的不熟悉，加上前面Push和commit时不仔细，导致一堆问题，因此我用最蠢的方法删库重建，所以之前star过的需要重新star一下。还有由于之前打的Tag就不一定匹配对应的版本，所以现在的Tag也不一定对应当时版本的代码。
+本项目将原始 C 语言编写的天翼校园网认证客户端(来自[BadGhost520](https://github.com/BadGhost520))移植为 Android 原生应用(APK)，无需拥有 shell 及以上权限的安卓终端就能轻松运行。
 
-本项目已成功将原始 C 语言编写的天翼校园网认证客户端(来自[BadGhost520](https://github.com/BadGhost520))移植为 Android 原生应用(APK)。通过 JNI 桥接和 Android 前台服务，实现了无须 shell 或 Root 权限的校园网拨号认证。
-
-[转到原作者的项目](https://github.com/BadGhost520/ESurfingClient-CVersion) | [回到原先我修改的分支](https://github.com/anshenglv/ESurfingClient-CVersion-Android-Terminal)
+[转到上游原作者的项目](https://github.com/BadGhost520/ESurfingClient-CVersion)
 
 **应用运行示例：**
 
@@ -16,20 +16,17 @@
 - 输出格式：由可执行二进制文件转变为共享库 (.so)，通过 JNI 被 Android 应用调用。
 - 运行模式：采用 Android 前台服务 (Foreground Service) 包装 C 逻辑，并提供持续的通知栏显示。
 ### 2. 原生 C 代码处理
-- 尽量少地改动原始C代码，非必要问题不处理，方便日后同步更新。
-- 添加了一堆#ifdef __ANDROID__，用来避免执行没有的功能和没有的路径。
-- 不在Android上使用Web前端功能。
-- 日志系统：增加了 Android 日志 (__android_log_print) 支持，方便在 Logcat 中调试。
+- PlatformUtils.h  ExecPath.c -> 运行路径获取安卓应用程序私有目录的路径。
+- Shutdowm.c -> 移除Linux信号处理和防止重复退出的逻辑代码。
+- 跳过Main.c，直接从DialerClient.c的work()启动C程序。
 ### 3. JNI 桥接层设计
-- shut(0)退出逻辑重构，避免整个应用被阻塞和闪退。
-- 状态同步：通过原子标志位(g_thread_keep_alive)
-同步Java层与C层的运行状态，防止用户点击了停止后又立即启动。
+- shut(0)独立线程执行，避免整个应用UI被阻塞和闪退。
+- 状态同步：通过原子标志位(g_thread_keep_alive)，同步Java层与C层的运行状态，防止重复启动或停止。
 ### 4. Android UI/UX 实现
 - 日志查看器：
   - 日志页只有在服务运行时每0.5秒自动从run.log读取日志并同步到应用层。
   - 增加了全面的历史日志的查看和管理，导出和分享，无需root用户自行寻找。
   - 双指缩放：支持通过捏合手势实时调整日志字体大小，但是最好横向捏合，新版compose纵向容易误触滑动。
-- 多语言支持：建立了完善的 strings.xml 资源体系，支持 中文 / 英文 根据系统语言自动切换。
 - 沉浸式设计：
   - 现在能够在横屏模式下避让挖孔了。
   - 沉浸式状态栏，自动切换深浅色。
