@@ -304,7 +304,12 @@ void work()
     g_prog_status = calloc(1, sizeof(prog_status_t)); // 初始化 g_prog_status 指针并分配 1 个空间
 
     init_shutdown_hook(); // 初始化关闭钩子
-/**
+
+    if (init_logger() == false) return; // 初始化日志系统
+
+    print_banner();
+
+    /**
      * 先加载配置再起 Web 服务
      *
      * 监听端口与是否允许外部访问 (配置里的 web_port / web_external_acc) 要在
@@ -313,9 +318,6 @@ void work()
      * 会挂住等用户改配置, 那种状态下网页上的账号信息本来就是空的
      */
     if (load_cfg() == false) shut(1); // 加载配置文件
-    if (init_logger() == false) return; // 初始化日志系统
-
-    print_banner();
 
 #ifndef __OPENWRT__
     if (start_web_server() == false) shut(1); // 启动 Web 服务器线程

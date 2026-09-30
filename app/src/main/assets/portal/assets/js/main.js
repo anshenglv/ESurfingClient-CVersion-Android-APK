@@ -1,5 +1,5 @@
 const CHANNEL_TEXT = {
-    windows: 'Windows (未实现, Android 替代)',
+    windows: 'Windows',
     linux: 'Linux',
     android: 'Android',
     ios: 'iOS',

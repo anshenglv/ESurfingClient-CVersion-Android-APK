@@ -382,7 +382,7 @@ fun HomeScreenContent(
     var expanded2 by remember { mutableStateOf(false) }
     val channels = listOf("1","2","3","4", "5")
     val channelLabels = mapOf(
-        "1" to "Windows(暂未实现,回退至Android)",
+        "1" to "Windows",
         "2" to "Linux",
         "3" to "Android",
         "4" to "iOS",
@@ -709,7 +709,7 @@ fun HomeScreenContent(
                         buildAnnotatedString {
                             withLink(
                                 LinkAnnotation.Url(
-                                    "http://localhost:8888",
+                                    "http://127.0.0.1:8888",
                                     TextLinkStyles(
                                         style = SpanStyle(
                                             color = MaterialTheme.colorScheme.primary,
@@ -717,7 +717,7 @@ fun HomeScreenContent(
                                         )
                                     )
                                 )
-                            ) { append("http://localhost:8888") }
+                            ) { append("http://127.0.0.1:8888") }
                         }, lineHeight = 21.sp, fontSize = 14.sp
                     )
                 }
@@ -757,7 +757,7 @@ fun HomeScreenContent(
                     val versionCode = context.packageManager
                         .getPackageInfo(context.packageName, 0)
                         .longVersionCode
-                    Text(text = "$versionName ($versionCode) | 2.1.3-r5",fontSize = 14.sp)
+                    Text(text = "$versionName ($versionCode) | 2.1.5-r2",fontSize = 14.sp)
                 }
                 HorizontalDivider(thickness = 0.5.dp, color = MaterialTheme.colorScheme.outlineVariant)
                 Column(modifier = Modifier.fillMaxWidth()){
