@@ -2,9 +2,11 @@
 >
 >由于我对git和github的不熟悉，加上前面Push和commit时不仔细，导致一堆问题，因此我用最蠢的方法删库重建，所以之前star过的需要重新star一下。还有由于之前打的Tag就不一定匹配对应的版本，所以现在的Tag也不一定对应当时版本的代码。
 
-本项目将原始 C 语言编写的天翼校园网认证客户端(来自[BadGhost520](https://github.com/BadGhost520))移植为 Android 原生应用(APK)，无需拥有 shell 及以上权限的安卓终端就能轻松运行。
+本项目将原始 C 语言编写的仅能用于终端的天翼校园网认证程序(来自[BadGhost520](https://github.com/BadGhost520))移植为 Android 原生应用(APK)，无需拥有 shell 及以上权限的安卓终端就能轻松运行。
 
 [转到上游原作者的项目](https://github.com/BadGhost520/ESurfingClient-CVersion)
+
+### 原汁原味，就像是在终端里运行，但又方便易用。
 
 **应用运行示例：**
 
@@ -16,12 +18,13 @@
 - 输出格式：由可执行二进制文件转变为共享库 (.so)，通过 JNI 被 Android 应用调用。
 - 运行模式：采用 Android 前台服务 (Foreground Service) 包装 C 逻辑，并提供持续的通知栏显示。
 ### 2. 原生 C 代码处理
-- PlatformUtils.h  ExecPath.c -> 运行路径获取安卓应用程序私有目录的路径。
+- PlatformUtils.h 和 ExecPath.c -> 运行路径获取安卓应用程序私有目录的路径。
 - Shutdowm.c -> 移除Linux信号处理和防止重复退出的逻辑代码。
 - 跳过Main.c，直接从DialerClient.c的work()启动C程序。
+- 其他的都原封不动。本来 SupervisorSignal/Child/State 还有 SimProcess 以及 Service.c 这些在安卓都是不可用的，但是既然能跑，运行时也不会用到那部分代码，干脆留着了。
 ### 3. JNI 桥接层设计
 - shut(0)独立线程执行，避免整个应用UI被阻塞和闪退。
-- 状态同步：通过原子标志位(g_thread_keep_alive)，同步Java层与C层的运行状态，防止重复启动或停止。
+- 状态同步：通过原子标志位(g_thread_keep_alive)，同步Java层与C层的运行状态，防止服务被重复启动或停止。
 ### 4. Android UI/UX 实现
 - 日志查看器：
   - 日志页只有在服务运行时每0.5秒自动从run.log读取日志并同步到应用层。
