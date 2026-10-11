@@ -109,7 +109,7 @@ class MainViewModel(application: Application) : AndroidViewModel(application) {
     private fun startLogUpdater() {
         logJob?.cancel()
         logJob = viewModelScope.launch {
-            var isRunning by mutableStateOf(true)
+            var isRunning = true
             while (true) {
                 if (isRunning){updateLogs()}
                 serviceStatus = ESurfingService.getServiceStatus()

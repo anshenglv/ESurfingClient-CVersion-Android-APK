@@ -7,13 +7,22 @@ import android.app.Service
 import android.content.Intent
 import android.os.IBinder
 import androidx.core.app.NotificationCompat
+import kotlinx.coroutines.CoroutineScope
+import kotlinx.coroutines.Dispatchers
+import kotlinx.coroutines.SupervisorJob
+import kotlinx.coroutines.delay
+import kotlinx.coroutines.launch
 import java.io.File
+import kotlin.time.Duration.Companion.milliseconds
 
 enum class ServiceStatus {
     STOPPED, RUNNING, STOPPING
 }
 
 class ESurfingService : Service() {
+
+    private val serviceJob = SupervisorJob()
+    private val serviceScope = CoroutineScope(Dispatchers.IO + serviceJob)
 
     override fun onCreate() {
         super.onCreate()
@@ -27,6 +36,7 @@ class ESurfingService : Service() {
         startForeground(1, notification)
         
         startNative(filesDir.absolutePath)
+        startNativeMonitor()
         
         return START_STICKY
     }
@@ -62,8 +72,36 @@ class ESurfingService : Service() {
     }
 
     override fun onDestroy() {
+        serviceJob.cancel()
         stopNative()
         super.onDestroy()
+    }
+
+    private fun startNativeMonitor() {
+        serviceScope.launch {
+            var hasRun = false
+            val startTime = System.currentTimeMillis()
+            while (System.currentTimeMillis() - startTime < 10000) {
+                if (getServiceStatus() == ServiceStatus.RUNNING) {
+                    hasRun = true
+                    break
+                }
+                delay(200.milliseconds)
+            }
+
+            if (!hasRun) {
+                stopSelf()
+                return@launch
+            }
+
+            while (true) {
+                delay(500.milliseconds)
+                if (getServiceStatus() == ServiceStatus.STOPPED) {
+                    stopSelf()
+                    break
+                }
+            }
+        }
     }
 
     override fun onBind(intent: Intent?): IBinder? = null
